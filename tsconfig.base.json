@@ -11,6 +11,7 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "baseUrl": ".",
+    "types": ["node"],
     "paths": {
       "@shared/*": ["packages/shared/src/*"],
       "@sdk/*": ["packages/sdk/src/*"],
