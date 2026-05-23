@@ -41,11 +41,11 @@ description: "Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 4: Backend API Foundation
 
-- [ ] T019 Initialize Express server skeleton and modular routing (apps/server/src/index.ts)
-- [ ] T020 Configure global structured error handling middleware (apps/server/src/middleware/error.ts)
-- [ ] T021 Configure request validation middleware using Zod (apps/server/src/middleware/validation.ts)
-- [ ] T022 [P] Implement authentication infrastructure (JWT, refresh tokens) (apps/server/src/auth)
-- [ ] T023 [P] Implement authorization helpers and project permission enforcement (apps/server/src/auth/authorization.ts)
+- [x] T019 Initialize Express server skeleton and modular routing (apps/server/src/index.ts)
+- [x] T020 Configure global structured error handling middleware (apps/server/src/middleware/error.ts)
+- [x] T021 Configure request validation middleware using Zod (apps/server/src/middleware/validation.ts)
+- [x] T022 [P] Implement authentication infrastructure (JWT, refresh tokens) (apps/server/src/auth)
+- [x] T023 [P] Implement authorization helpers and project permission enforcement (apps/server/src/auth/authorization.ts)
 
 ---
 
