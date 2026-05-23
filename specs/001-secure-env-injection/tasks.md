@@ -51,10 +51,10 @@ description: "Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 5: Authentication Features (US1)
 
-- [ ] T024 [US1] Implement user registration endpoint (apps/server/src/routes/auth/register.ts)
-- [ ] T025 [US1] Implement user login endpoint (apps/server/src/routes/auth/login.ts)
-- [ ] T026 [US1] Implement current-user endpoint (`/auth/me`) (apps/server/src/routes/auth/me.ts)
-- [ ] T027 [US1] Implement logout/token invalidation endpoint (apps/server/src/routes/auth/logout.ts)
+- [x] T024 [US1] Implement user registration endpoint (apps/server/src/routes/auth/register.ts)
+- [x] T025 [US1] Implement user login endpoint (apps/server/src/routes/auth/login.ts)
+- [x] T026 [US1] Implement current-user endpoint (`/auth/me`) (apps/server/src/routes/auth/me.ts)
+- [x] T027 [US1] Implement logout/token invalidation endpoint (apps/server/src/routes/auth/logout.ts)
 
 ---
 

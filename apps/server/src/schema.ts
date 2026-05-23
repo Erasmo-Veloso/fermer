@@ -19,6 +19,22 @@ export const users = pgTable('users', {
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
 });
 
+export const sessions = pgTable(
+  'sessions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    refreshTokenHash: text('refresh_token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index('idx_sessions_user').on(table.userId),
+    tokenHashIdx: uniqueIndex('idx_sessions_refresh_token_hash').on(table.refreshTokenHash),
+  }),
+);
+
 export const devices = pgTable(
   'devices',
   {

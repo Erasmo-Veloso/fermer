@@ -10,6 +10,17 @@ CREATE TABLE IF NOT EXISTS users (
   last_login_at timestamptz
 );
 
+CREATE TABLE IF NOT EXISTS sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  refresh_token_hash text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  revoked_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_refresh_token_hash ON sessions(refresh_token_hash);
+
 CREATE TABLE IF NOT EXISTS devices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES users(id) ON DELETE CASCADE,

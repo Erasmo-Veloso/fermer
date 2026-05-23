@@ -1,5 +1,6 @@
 import type { Express } from 'express'
 import { Router } from 'express'
+import { authRouter } from './auth'
 
 function createPlaceholderRouter(name: string) {
   const router = Router()
@@ -17,7 +18,7 @@ export function registerRoutes(app: Express) {
     res.json({ ok: true })
   })
 
-  app.use('/api/auth', createPlaceholderRouter('auth'))
+  app.use('/api/auth', authRouter)
   app.use('/api/projects', createPlaceholderRouter('projects'))
   app.use('/api/secrets', createPlaceholderRouter('secrets'))
   app.use('/api/devices', createPlaceholderRouter('devices'))

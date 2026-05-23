@@ -28,6 +28,17 @@ Indexes: unique(email)
 
 Indexes: index on `user_id`, index on `fingerprint`, partial index on `revoked`.
 
+## sessions
+
+- `id` UUID PRIMARY KEY
+- `user_id` UUID REFERENCES users(id) ON DELETE CASCADE
+- `refresh_token_hash` text NOT NULL
+- `expires_at` timestamptz NOT NULL
+- `revoked_at` timestamptz NULL
+- `created_at` timestamptz NOT NULL DEFAULT now()
+
+Indexes: index on `user_id`, unique index on `refresh_token_hash`
+
 ## projects
 
 - `id` UUID PRIMARY KEY
