@@ -62,6 +62,7 @@ Indexes: composite index on (project_id, name)
 - `metadata` jsonb NULL
 
 Constraints & Indexes:
+
 - Unique constraint on (project_id, environment_id, name)
 - Index on (project_id, environment_id)
 

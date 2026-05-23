@@ -1,7 +1,7 @@
 // Validation helpers. Prefer using Zod when available.
 // This module exports optional Zod schemas; consumers should install Zod.
 
-export { }
+export {};
 
 // Example schema (uncomment when Zod is installed):
 // import { z } from 'zod'

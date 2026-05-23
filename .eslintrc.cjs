@@ -6,9 +6,9 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',
-    project: './tsconfig.base.json'
+    project: './tsconfig.base.json',
   },
   rules: {
-    'no-console': 'warn'
-  }
-}
+    'no-console': 'warn',
+  },
+};

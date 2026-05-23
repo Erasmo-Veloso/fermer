@@ -27,15 +27,15 @@ description: "Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 3: Database Layer
 
-- [ ] T010 Configure local PostgreSQL development environment and migration workflow (devops/docker-compose.yml or docs/setup-db.md)
-- [ ] T011 Configure Drizzle ORM and project DB schema entrypoint (apps/server/src/db)
-- [ ] T012 [P] [US1] Create `users` schema and migration (apps/server/src/db/migrations)
-- [ ] T013 [P] [US1] Create `devices` schema and migration (apps/server/src/db/migrations)
-- [ ] T014 [P] Create `projects` schema and migration (apps/server/src/db/migrations)
-- [ ] T015 [P] [US5] Create `environments` schema and migration (apps/server/src/db/migrations)
-- [ ] T016 [P] [US4] Create `secrets` schema (encrypted payloads) and migration (apps/server/src/db/migrations)
-- [ ] T017 [P] Create `project_members` schema for roles and permissions (apps/server/src/db/migrations)
-- [ ] T018 [P] Create `audit_logs` schema for access/auth events and migration (apps/server/src/db/migrations)
+- [x] T010 Configure local PostgreSQL development environment and migration workflow (devops/docker-compose.yml or docs/setup-db.md)
+- [x] T011 Configure Drizzle ORM and project DB schema entrypoint (apps/server/src/db)
+- [x] T012 [P] [US1] Create `users` schema and migration (apps/server/src/db/migrations)
+- [x] T013 [P] [US1] Create `devices` schema and migration (apps/server/src/db/migrations)
+- [x] T014 [P] Create `projects` schema and migration (apps/server/src/db/migrations)
+- [x] T015 [P] [US5] Create `environments` schema and migration (apps/server/src/db/migrations)
+- [x] T016 [P] [US4] Create `secrets` schema (encrypted payloads) and migration (apps/server/src/db/migrations)
+- [x] T017 [P] Create `project_members` schema for roles and permissions (apps/server/src/db/migrations)
+- [x] T018 [P] Create `audit_logs` schema for access/auth events and migration (apps/server/src/db/migrations)
 
 ---
 
