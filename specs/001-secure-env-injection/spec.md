@@ -8,7 +8,7 @@
 
 **Input**: User description: "Secure Environment Variable Distribution and Runtime Injection" — see original feature brief in project issue/brief.
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Developer Authentication (Priority: P1)
 
@@ -106,7 +106,7 @@ Acceptance Scenarios:
 - How are partially-authorized secret sets handled when some variables are allowed and others denied? (Expect inject-what-you-can + clear logs.)
 - How to handle extremely large secret sets? (Batching/pagination for retrieval.)
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -131,7 +131,7 @@ Acceptance Scenarios:
 - **Session**: Authentication token for a user+device, time-limited.
 - **AccessLog**: Immutable record of secret access events (user, device, action, timestamp).
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

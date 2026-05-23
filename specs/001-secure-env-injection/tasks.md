@@ -89,7 +89,7 @@ description: "Task list for Secure Environment Variable Distribution and Runtime
 
 - [ ] T040 Initialize CLI application scaffold with command parser and help (apps/cli/src/index.ts)
 - [ ] T041 Configure CLI output utilities (apps/cli/src/utils/output.ts)
-- [ ] T042 Configure local CLI storage for tokens and encrypted cache (apps/cli/src/storage/*)
+- [ ] T042 Configure local CLI storage for tokens and encrypted cache (apps/cli/src/storage/\*)
 
 ---
 
@@ -137,7 +137,7 @@ description: "Task list for Secure Environment Variable Distribution and Runtime
 
 - [ ] T058 Improve error messaging with recovery suggestions (docs/errors.md, apps/cli/src/errors.ts)
 - [ ] T059 Improve CLI help output and examples (docs/cli-usage.md, apps/cli/src/help.ts)
-- [ ] T060 Add confirmation prompts for destructive actions (apps/cli/src/prompts/*)
+- [ ] T060 Add confirmation prompts for destructive actions (apps/cli/src/prompts/\*)
 
 ---
 
