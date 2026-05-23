@@ -1,4 +1,4 @@
-import { randomBytes, createCipheriv, createDecipheriv, generateKeyPairSync, createECDH } from 'node:crypto'
+import { randomBytes, createCipheriv, createDecipheriv, generateKeyPairSync, diffieHellman, createPrivateKey, createPublicKey } from 'node:crypto'
 
 export type KeyPair = { publicKey: string; privateKey: string }
 
@@ -30,10 +30,9 @@ export function decryptAesGcm(iv_b64: string, ciphertext_b64: string, tag_b64: s
   return plaintext
 }
 
-// Simple ECDH-derived shared secret helper (for demonstration)
 export function deriveSharedSecret(privateKeyPem: string, otherPublicKeyPem: string): Buffer {
-  const ecdh = createECDH('prime256v1')
-  ecdh.setPrivateKey(privateKeyPem, 'pem')
-  const secret = ecdh.computeSecret(otherPublicKeyPem, 'pem')
-  return secret
+  return diffieHellman({
+    privateKey: createPrivateKey(privateKeyPem),
+    publicKey: createPublicKey(otherPublicKeyPem)
+  })
 }

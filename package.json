@@ -9,5 +9,19 @@
   "scripts": {
     "build": "echo \"build placeholder\"",
     "lint": "echo \"lint placeholder\""
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "25.9.1",
+    "@types/pg": "^8.20.0",
+    "ts-node": "10.9.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.7"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "express": "^5.2.1",
+    "pg": "^8.21.0"
   }
 }

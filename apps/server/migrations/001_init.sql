@@ -1,5 +1,5 @@
 -- Initial schema for Fermer
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS secrets (
   project_id uuid REFERENCES projects(id) ON DELETE CASCADE,
   environment_id uuid REFERENCES environments(id) ON DELETE CASCADE,
   name text NOT NULL,
-  encrypted_value bytea NOT NULL,
+  encrypted_value text NOT NULL,
   version integer NOT NULL DEFAULT 1,
   created_by uuid REFERENCES users(id),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS wrapped_keys (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id uuid REFERENCES projects(id) ON DELETE CASCADE,
   device_id uuid REFERENCES devices(id) ON DELETE CASCADE,
-  wrapped_key bytea NOT NULL,
+  wrapped_key text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_wrapped_keys_unique ON wrapped_keys(project_id, device_id);

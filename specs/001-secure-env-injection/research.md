@@ -66,6 +66,7 @@ Purpose: capture design decisions, trade-offs, and concrete recommendations for 
 - Symmetric: AES-256-GCM for payload encryption (authenticated encryption).
 - Asymmetric: ECDH/ECDSA (P-256) for device keypairs and wrapping project keys.
 - KDF: HKDF for key derivation; PBKDF2 for passphrase-derived keys initially (tune iterations per platform).
+- Storage encoding for v1: encrypted payloads and wrapped keys are stored as base64 text to simplify schema compatibility across drivers.
 
 10) Audit and logging
 
@@ -77,6 +78,7 @@ Purpose: capture design decisions, trade-offs, and concrete recommendations for 
 - What is the expected max size/count of secret sets per project? (affects cache format decisions)
 - Decide iteration/parameters for PBKDF2 or whether to rely on OS keyrings in target deployments.
 - Define retention policy for wrapped project keys and audit logs.
+- Development database: use the provided Neon PostgreSQL instance as the default dev database URL for the current workspace.
 
 12) Recommended immediate tasks
 

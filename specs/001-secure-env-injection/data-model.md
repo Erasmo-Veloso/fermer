@@ -54,7 +54,7 @@ Indexes: composite index on (project_id, name)
 - `project_id` UUID REFERENCES projects(id) ON DELETE CASCADE
 - `environment_id` UUID REFERENCES environments(id) ON DELETE CASCADE
 - `name` text NOT NULL -- secret key name
-- `encrypted_value` bytea NOT NULL -- AES-256-GCM ciphertext including auth tag
+- `encrypted_value` text NOT NULL -- AES-256-GCM ciphertext encoded as base64 text for v1
 - `version` integer NOT NULL DEFAULT 1
 - `created_by` UUID REFERENCES users(id)
 - `created_at` timestamptz NOT NULL DEFAULT now()
@@ -82,7 +82,7 @@ Store per-device wrapped project keys allowing revocation without re-encrypting 
 - `id` UUID PRIMARY KEY
 - `project_id` UUID REFERENCES projects(id) ON DELETE CASCADE
 - `device_id` UUID REFERENCES devices(id) ON DELETE CASCADE
-- `wrapped_key` bytea NOT NULL -- project key encrypted with device public key
+- `wrapped_key` text NOT NULL -- project key encrypted with device public key and encoded as base64 text
 - `created_at` timestamptz NOT NULL DEFAULT now()
 
 Indexes: composite unique (project_id, device_id)

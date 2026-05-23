@@ -1,4 +1,4 @@
-import type { User, Project } from '@fermer/shared/src/types'
+import type { User, Project } from '../../shared/src/types'
 
 export type ApiClientOptions = { baseUrl: string; token?: string }
 
