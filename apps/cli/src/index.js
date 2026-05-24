@@ -1,49 +1,11 @@
-const { inspect } = require('node:util');
-const { formatSection, formatTip, formatError } = require('./utils/output.js');
-const { getStorageSummary, loadTokens } = require('./storage/index.js');
-const { login, logout, whoami, getApiBaseUrl } = require('./auth.js');
+const { formatSection, formatTip } = require('./utils/output.js');
+const { login, logout, whoami } = require('./auth.js');
+const { formatCliError } = require('./errors.js');
+const { printHelp, printCommandHelp } = require('./help.js');
 
-function printUsage(command) {
-  if (command === 'login') {
-    console.log('Usage: fermer login <email> <password> [apiUrl]');
-    console.log(`Default apiUrl: ${getApiBaseUrl()}`);
-    return;
-  }
-
-  if (command === 'whoami') {
-    console.log('Usage: fermer whoami');
-    return;
-  }
-
-  if (command === 'logout') {
-    console.log('Usage: fermer logout');
-    return;
-  }
-}
-
-function printHelp() {
-  console.log(formatSection('fermer'));
-  console.log('A CLI for secure environment distribution and runtime injection.');
-  console.log('');
-  console.log('Usage: fermer <command> [options]');
-  console.log('');
-  console.log('Commands:');
-  console.log('  login     Authenticate against the server');
-  console.log('  logout    Clear local authentication');
-  console.log('  whoami    Show current session context');
-  console.log('  init      Initialize local project config');
-  console.log('  link      Link this repository to a project');
-  console.log('  unlink    Remove the local project association');
-  console.log('  secrets   Manage secret metadata and sync');
-  console.log('  run       Inject secrets and execute a command');
-  console.log('');
-  console.log(
-    formatTip(`Local storage: ${inspect(getStorageSummary(), { colors: false, compact: true })}`),
-  );
-  const tokens = loadTokens();
-  if (tokens?.userId) {
-    console.log(formatTip(`Signed in as ${tokens.email || tokens.userId}`));
-  }
+function reportError(error) {
+  console.error(formatCliError(error));
+  process.exitCode = 1;
 }
 
 async function main(argv = process.argv.slice(2)) {
@@ -54,12 +16,17 @@ async function main(argv = process.argv.slice(2)) {
     return;
   }
 
+  if (rest[0] === '--help' || rest[0] === '-h' || rest[0] === 'help') {
+    printCommandHelp(command);
+    return;
+  }
+
   switch (command) {
     case 'login':
       try {
         const [email, password, apiUrl] = rest;
         if (!email || !password) {
-          printUsage('login');
+          printCommandHelp('login');
           process.exitCode = 1;
           return;
         }
@@ -69,8 +36,7 @@ async function main(argv = process.argv.slice(2)) {
         console.log(formatTip(`Signed in as ${result.user.email}`));
         console.log(JSON.stringify({ user: result.user, apiUrl: result.apiUrl }, null, 2));
       } catch (error) {
-        console.error(formatError(error instanceof Error ? error.message : String(error)));
-        process.exitCode = 1;
+        reportError(error);
       }
       break;
     case 'logout':
@@ -84,8 +50,7 @@ async function main(argv = process.argv.slice(2)) {
         console.log(formatSection('fermer whoami'));
         console.log(JSON.stringify(result.user, null, 2));
       } catch (error) {
-        console.error(formatError(error instanceof Error ? error.message : String(error)));
-        process.exitCode = 1;
+        reportError(error);
       }
       break;
     case 'init': {
@@ -97,8 +62,7 @@ async function main(argv = process.argv.slice(2)) {
         console.log(formatTip('Local project initialized.'));
         console.log(JSON.stringify(cfg, null, 2));
       } catch (err) {
-        console.error(formatError(err instanceof Error ? err.message : String(err)));
-        process.exitCode = 1;
+        reportError(err);
       }
       break;
     }
@@ -111,50 +75,45 @@ async function main(argv = process.argv.slice(2)) {
         console.log(formatTip('Repository linked to project.'));
         console.log(JSON.stringify(cfg, null, 2));
       } catch (err) {
-        console.error(formatError(err instanceof Error ? err.message : String(err)));
-        process.exitCode = 1;
+        reportError(err);
       }
       break;
     }
     case 'unlink': {
       const { unlink } = require('./commands/unlink.js');
       try {
-        unlink();
-        console.log(formatSection('fermer unlink'));
-        console.log(formatTip('Local project association removed.'));
+        const removed = await unlink();
+        if (removed) {
+          console.log(formatSection('fermer unlink'));
+          console.log(formatTip('Local project association removed.'));
+        }
       } catch (err) {
-        console.error(formatError(err instanceof Error ? err.message : String(err)));
-        process.exitCode = 1;
+        reportError(err);
       }
       break;
     }
     case 'secrets': {
       const [sub, ...srest] = rest;
+      const getLocalConfig = () => {
+        try {
+          return require(process.cwd() + '/.fermer/config.json');
+        } catch {
+          return null;
+        }
+      };
+
       switch (sub) {
         case 'list': {
           const { listSecrets } = require('./commands/secrets/list.js');
           const [environmentId] = srest;
           try {
-            const localCfg = (() => {
-              try {
-                return require(process.cwd() + '/.fermer/config.json');
-              } catch {
-                return null;
-              }
-            })();
+            const localCfg = getLocalConfig();
             const projectId = localCfg?.projectId;
-            listSecrets({ projectId, environmentId })
-              .then((rows) => {
-                console.log(formatSection('fermer secrets list'));
-                console.log(JSON.stringify(rows, null, 2));
-              })
-              .catch((err) => {
-                console.error(formatError(err instanceof Error ? err.message : String(err)));
-                process.exitCode = 1;
-              });
+            const rows = await listSecrets({ projectId, environmentId });
+            console.log(formatSection('fermer secrets list'));
+            console.log(JSON.stringify(rows, null, 2));
           } catch (err) {
-            console.error(formatError(err instanceof Error ? err.message : String(err)));
-            process.exitCode = 1;
+            reportError(err);
           }
           break;
         }
@@ -162,26 +121,13 @@ async function main(argv = process.argv.slice(2)) {
           const { pullSecrets } = require('./commands/secrets/pull.js');
           const [environmentId] = srest;
           try {
-            const localCfg = (() => {
-              try {
-                return require(process.cwd() + '/.fermer/config.json');
-              } catch {
-                return null;
-              }
-            })();
+            const localCfg = getLocalConfig();
             const projectId = localCfg?.projectId;
-            pullSecrets({ projectId, environmentId })
-              .then((out) => {
-                console.log(formatSection('fermer secrets pull'));
-                console.log(formatTip(`Wrote ${out.count} secrets to ${out.path}`));
-              })
-              .catch((err) => {
-                console.error(formatError(err instanceof Error ? err.message : String(err)));
-                process.exitCode = 1;
-              });
+            const out = await pullSecrets({ projectId, environmentId });
+            console.log(formatSection('fermer secrets pull'));
+            console.log(formatTip(`Wrote ${out.count} secrets to ${out.path}`));
           } catch (err) {
-            console.error(formatError(err instanceof Error ? err.message : String(err)));
-            process.exitCode = 1;
+            reportError(err);
           }
           break;
         }
@@ -189,66 +135,38 @@ async function main(argv = process.argv.slice(2)) {
           const { syncSecrets } = require('./commands/secrets/sync.js');
           const [environmentId] = srest;
           try {
-            const localCfg = (() => {
-              try {
-                return require(process.cwd() + '/.fermer/config.json');
-              } catch {
-                return null;
-              }
-            })();
+            const localCfg = getLocalConfig();
             const projectId = localCfg?.projectId;
-            syncSecrets({ projectId, environmentId })
-              .then((out) => {
-                console.log(formatSection('fermer secrets sync'));
-                console.log(formatTip(`${out.updatedCount} secrets updated locally.`));
-              })
-              .catch((err) => {
-                console.error(formatError(err instanceof Error ? err.message : String(err)));
-                process.exitCode = 1;
-              });
+            const out = await syncSecrets({ projectId, environmentId });
+            console.log(formatSection('fermer secrets sync'));
+            console.log(formatTip(`${out.updatedCount} secrets updated locally.`));
           } catch (err) {
-            console.error(formatError(err instanceof Error ? err.message : String(err)));
-            process.exitCode = 1;
+            reportError(err);
           }
           break;
         }
         default:
-          console.log(formatSection('fermer secrets'));
-          console.log(formatTip('Usage: fermer secrets <list|pull|sync> <environmentId>'));
+          printCommandHelp('secrets');
       }
       break;
     }
     case 'run':
       try {
         const { runCommand } = require('./commands/run.js');
-        // usage: fermer run <environmentId> -- <cmd> [args...]
         const split = rest.indexOf('--');
-        let envId;
-        let cmdArgs;
-        if (split === -1) {
-          envId = rest[0];
-          cmdArgs = rest.slice(1);
-        } else {
-          envId = rest.slice(0, split)[0];
-          cmdArgs = rest.slice(split + 1);
-        }
+        const envId = split === -1 ? rest[0] : rest.slice(0, split)[0];
+        const cmdArgs = split === -1 ? rest.slice(1) : rest.slice(split + 1);
 
-        runCommand({ environmentId: envId, cmdArgs })
-          .then((code) => process.exit(code))
-          .catch((err) => {
-            console.error(formatError(err instanceof Error ? err.message : String(err)));
-            process.exitCode = 1;
-          });
+        const code = await runCommand({ environmentId: envId, cmdArgs });
+        process.exit(code);
       } catch (err) {
-        console.error(formatError(err instanceof Error ? err.message : String(err)));
-        process.exitCode = 1;
+        reportError(err);
       }
       break;
     default:
-      console.error(formatError(`Unknown command: ${command}`));
+      reportError(`Unknown command: ${command}`);
       console.log('');
       printHelp();
-      process.exitCode = 1;
   }
 }
 

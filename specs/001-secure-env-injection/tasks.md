@@ -135,9 +135,9 @@ description: 'Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 15: Error Handling and UX
 
-- [ ] T058 Improve error messaging with recovery suggestions (docs/errors.md, apps/cli/src/errors.ts)
-- [ ] T059 Improve CLI help output and examples (docs/cli-usage.md, apps/cli/src/help.ts)
-- [ ] T060 Add confirmation prompts for destructive actions (apps/cli/src/prompts/\*)
+- [x] T058 Improve error messaging with recovery suggestions (docs/errors.md, apps/cli/src/errors.ts)
+- [x] T059 Improve CLI help output and examples (docs/cli-usage.md, apps/cli/src/help.ts)
+- [x] T060 Add confirmation prompts for destructive actions (apps/cli/src/prompts/\*)
 
 ---
 
