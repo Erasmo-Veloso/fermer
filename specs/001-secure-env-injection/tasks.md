@@ -1,5 +1,5 @@
 ---
-description: "Task list for Secure Environment Variable Distribution and Runtime Injection"
+description: 'Task list for Secure Environment Variable Distribution and Runtime Injection'
 ---
 
 # Tasks: Secure Environment Variable Distribution and Runtime Injection
@@ -60,36 +60,36 @@ description: "Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 6: Device Authorization
 
-- [ ] T028 [US1] Implement device keypair generation utilities (packages/crypto/src/device.ts)
-- [ ] T029 [US1] Implement device registration API and flow (apps/server/src/routes/devices/register.ts)
-- [ ] T030 [US1] Implement device validation middleware to reject unauthorized devices (apps/server/src/middleware/deviceValidation.ts)
+- [x] T028 [US1] Implement device keypair generation utilities (packages/crypto/src/device.ts)
+- [x] T029 [US1] Implement device registration API and flow (apps/server/src/routes/devices/register.ts)
+- [x] T030 [US1] Implement device validation middleware to reject unauthorized devices (apps/server/src/middleware/deviceValidation.ts)
 
 ---
 
 ## Phase 7: Project Management (US3)
 
-- [ ] T031 [US3] Implement create-project endpoint (apps/server/src/routes/projects/create.ts)
-- [ ] T032 [US3] Implement local repository linking support in the CLI (apps/cli/src/commands/link.ts)
-- [ ] T033 [US3] Implement invite project members endpoint (apps/server/src/routes/projects/invite.ts)
-- [ ] T034 [US3] Implement remove project members / revoke access endpoint (apps/server/src/routes/projects/remove.ts)
+- [x] T031 [US3] Implement create-project endpoint (apps/server/src/routes/projects/create.ts)
+- [x] T032 [US3] Implement local repository linking support in the CLI (apps/cli/src/commands/link.ts)
+- [x] T033 [US3] Implement invite project members endpoint (apps/server/src/routes/projects/invite.ts)
+- [x] T034 [US3] Implement remove project members / revoke access endpoint (apps/server/src/routes/projects/remove.ts)
 
 ---
 
 ## Phase 8: Secret Management (US4, US6)
 
-- [ ] T035 [US4] Implement create-secret endpoint (apps/server/src/routes/secrets/create.ts)
-- [ ] T036 [US6] Implement update-secret endpoint with version-safe updates and audit logging (apps/server/src/routes/secrets/update.ts)
-- [ ] T037 [US6] Implement delete-secret endpoint with confirmation safeguards (apps/server/src/routes/secrets/delete.ts)
-- [ ] T038 [US4] Implement list-secret-metadata endpoint returning names/environments only (apps/server/src/routes/secrets/list.ts)
-- [ ] T039 [US4] Implement secret-retrieval endpoint delivering encrypted payloads with permission validation (apps/server/src/routes/secrets/retrieve.ts)
+- [x] T035 [US4] Implement create-secret endpoint (apps/server/src/routes/secrets/create.ts)
+- [x] T036 [US6] Implement update-secret endpoint with version-safe updates and audit logging (apps/server/src/routes/secrets/update.ts)
+- [x] T037 [US6] Implement delete-secret endpoint with confirmation safeguards (apps/server/src/routes/secrets/delete.ts)
+- [x] T038 [US4] Implement list-secret-metadata endpoint returning names/environments only (apps/server/src/routes/secrets/list.ts)
+- [x] T039 [US4] Implement secret-retrieval endpoint delivering encrypted payloads with permission validation (apps/server/src/routes/secrets/retrieve.ts)
 
 ---
 
 ## Phase 9: CLI Foundation
 
-- [ ] T040 Initialize CLI application scaffold with command parser and help (apps/cli/src/index.ts)
-- [ ] T041 Configure CLI output utilities (apps/cli/src/utils/output.ts)
-- [ ] T042 Configure local CLI storage for tokens and encrypted cache (apps/cli/src/storage/\*)
+- [x] T040 Initialize CLI application scaffold with command parser and help (apps/cli/src/index.ts)
+- [x] T041 Configure CLI output utilities (apps/cli/src/utils/output.ts)
+- [x] T042 Configure local CLI storage for tokens and encrypted cache (apps/cli/src/storage/\*)
 
 ---
 
@@ -103,9 +103,9 @@ description: "Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 11: CLI Project Commands (US3)
 
-- [ ] T046 [US3] Implement `fermer init` to initialize local project config (apps/cli/src/commands/init.ts)
-- [ ] T047 [US3] Implement `fermer link` to persist project linkage locally (apps/cli/src/commands/link.ts)
-- [ ] T048 [US3] Implement `fermer unlink` to remove project association (apps/cli/src/commands/unlink.ts)
+- [x] T046 [US3] Implement `fermer init` to initialize local project config (apps/cli/src/commands/init.ts)
+- [x] T047 [US3] Implement `fermer link` to persist project linkage locally (apps/cli/src/commands/link.ts)
+- [x] T048 [US3] Implement `fermer unlink` to remove project association (apps/cli/src/commands/unlink.ts)
 
 ---
 

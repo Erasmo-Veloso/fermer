@@ -17,6 +17,7 @@
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
     "ts-node": "10.9.2",
+    "tsx": "^4.22.3",
     "typescript": "6.0.3",
     "vitest": "4.1.7"
   },

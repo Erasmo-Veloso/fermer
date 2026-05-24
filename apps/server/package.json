@@ -5,9 +5,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "start": "node ./dist/index.js",
+    "start": "tsx ./src/index.ts",
     "build": "tsc -p ../../tsconfig.base.json",
     "db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
-    "db:migrate": "node --loader ts-node/esm ./src/migrate.ts"
+    "db:migrate": "tsx ./src/migrate.ts"
   }
 }
