@@ -119,9 +119,9 @@ description: 'Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 13: Runtime Injection (US2, US5)
 
-- [ ] T052 [US2] Implement environment injection engine to merge runtime variables securely and avoid plaintext `.env` by default (apps/cli/src/injector.ts)
-- [ ] T053 [US2] Implement process execution integration that preserves stdout/stderr and streams (apps/cli/src/run/process.ts)
-- [ ] T054 [US2] Implement `fermer run` command that retrieves secrets, injects environment, and spawns the target command (apps/cli/src/commands/run.ts)
+- [x] T052 [US2] Implement environment injection engine to merge runtime variables securely and avoid plaintext `.env` by default (apps/cli/src/injector.ts)
+- [x] T053 [US2] Implement process execution integration that preserves stdout/stderr and streams (apps/cli/src/run/process.ts)
+- [x] T054 [US2] Implement `fermer run` command that retrieves secrets, injects environment, and spawns the target command (apps/cli/src/commands/run.ts)
 
 ---
 
