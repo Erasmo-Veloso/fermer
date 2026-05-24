@@ -219,12 +219,29 @@ async function main(argv = process.argv.slice(2)) {
       break;
     }
     case 'run':
-      console.log(formatSection(`fermer ${command}`));
-      console.log(
-        formatTip('Command scaffolding is ready; implementation continues in later phases.'),
-      );
-      if (rest.length > 0) {
-        console.log(JSON.stringify({ args: rest }, null, 2));
+      try {
+        const { runCommand } = require('./commands/run.js');
+        // usage: fermer run <environmentId> -- <cmd> [args...]
+        const split = rest.indexOf('--');
+        let envId;
+        let cmdArgs;
+        if (split === -1) {
+          envId = rest[0];
+          cmdArgs = rest.slice(1);
+        } else {
+          envId = rest.slice(0, split)[0];
+          cmdArgs = rest.slice(split + 1);
+        }
+
+        runCommand({ environmentId: envId, cmdArgs })
+          .then((code) => process.exit(code))
+          .catch((err) => {
+            console.error(formatError(err instanceof Error ? err.message : String(err)));
+            process.exitCode = 1;
+          });
+      } catch (err) {
+        console.error(formatError(err instanceof Error ? err.message : String(err)));
+        process.exitCode = 1;
       }
       break;
     default:
