@@ -7,6 +7,7 @@ import { createTokenPair, verifyRefreshToken } from '../auth'
 import { hashPassword, verifyPassword } from '../auth/password'
 import { createSession, findActiveSession, revokeSession } from '../auth/sessions'
 import { requireAuth, type AuthenticatedRequest } from '../auth/request'
+import { logAuthEvent } from '../audit'
 import { HttpError } from '../middleware/error'
 import { validateBody } from '../middleware/validation'
 
@@ -61,6 +62,12 @@ authRouter.post('/register', validateBody(registerSchema), async (req, res, next
       .returning()
 
     const tokenPair = await issueTokens(createdUser.id)
+    // audit: registration
+    try {
+      await logAuthEvent({ userId: createdUser.id, action: 'register' })
+    } catch {
+      // don't fail request on audit logging error
+    }
     res.status(201).json({
       ok: true,
       user: safeUser(createdUser),
@@ -86,6 +93,11 @@ authRouter.post('/login', validateBody(loginSchema), async (req, res, next) => {
       .returning()
 
     const tokenPair = await issueTokens(user.id)
+    try {
+      await logAuthEvent({ userId: user.id, action: 'login' })
+    } catch {
+      // ignore audit errors
+    }
     res.json({
       ok: true,
       user: safeUser(updatedUser ?? user),
@@ -123,6 +135,12 @@ authRouter.post('/logout', validateBody(logoutSchema), async (req, res, next) =>
     }
 
     await revokeSession(refreshToken)
+    try {
+      const subject = verifyRefreshToken(refreshToken)
+      await logAuthEvent({ userId: subject.userId, action: 'logout' })
+    } catch {
+      // ignore
+    }
     res.status(204).send()
   } catch (error) {
     next(error)

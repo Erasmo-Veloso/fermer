@@ -127,9 +127,9 @@ description: 'Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 14: Audit System (US7)
 
-- [ ] T055 [US7] Implement audit logging for authentication events (apps/server/src/audit/auth.ts)
-- [ ] T056 [US7] Implement audit logging for secret access events (apps/server/src/audit/secrets.ts)
-- [ ] T057 [US7] Implement audit logging for permission changes (apps/server/src/audit/permissions.ts)
+- [x] T055 [US7] Implement audit logging for authentication events (apps/server/src/audit/auth.ts)
+- [x] T056 [US7] Implement audit logging for secret access events (apps/server/src/audit/secrets.ts)
+- [x] T057 [US7] Implement audit logging for permission changes (apps/server/src/audit/permissions.ts)
 
 ---
 

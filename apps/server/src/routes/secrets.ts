@@ -6,6 +6,7 @@ import { secrets, environments, projects, projectMembers } from '../schema';
 import { validateBody } from '../middleware/validation';
 import { HttpError } from '../middleware/error';
 import { eq, and } from 'drizzle-orm';
+import { logSecretEvent } from '../audit';
 
 const createSchema = z.object({
   projectId: z.string().uuid(),
@@ -79,6 +80,11 @@ secretsRouter.post(
             createdAt: created.createdAt,
           },
         });
+      try {
+        await logSecretEvent({ projectId, userId: req.auth.userId, deviceId: req.auth.deviceId, action: 'create', resourceId: created.id })
+      } catch {
+        // ignore audit errors
+      }
     } catch (err) {
       next(err);
     }
@@ -150,6 +156,11 @@ secretsRouter.put(
         ok: true,
         secret: { id: updated.id, version: updated.version, updatedAt: updated.updatedAt },
       });
+      try {
+        await logSecretEvent({ projectId: String(existing.projectId), userId: req.auth.userId, deviceId: req.auth.deviceId, action: 'update', resourceId: updated.id })
+      } catch {
+        // ignore
+      }
     } catch (err) {
       next(err);
     }
@@ -187,6 +198,9 @@ secretsRouter.delete('/:secretId', requireAuth, async (req: AuthenticatedRequest
 
     await db.delete(secrets).where(eq(secrets.id, secretIdStr));
     // TODO: audit log
+    try {
+      await logSecretEvent({ projectId: String(existing.projectId), userId: req.auth.userId, deviceId: req.auth.deviceId, action: 'delete', resourceId: existing.id })
+    } catch {}
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -263,6 +277,9 @@ secretsRouter.get('/:secretId', requireAuth, async (req: AuthenticatedRequest, r
         version: existing.version,
       },
     });
+    try {
+      await logSecretEvent({ projectId: String(existing.projectId), userId: req.auth.userId, deviceId: req.auth.deviceId, action: 'retrieve', resourceId: existing.id })
+    } catch {}
   } catch (err) {
     next(err);
   }

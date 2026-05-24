@@ -6,6 +6,7 @@ import { db } from '../db';
 import { projects, projectMembers } from '../schema';
 import { validateBody } from '../middleware/validation';
 import { HttpError } from '../middleware/error';
+import { logPermissionEvent } from '../audit';
 
 const createProjectSchema = z.object({
   name: z.string().min(1),
@@ -120,6 +121,10 @@ projectsRouter.post(
         .insert(projectMembers)
         .values({ projectId: projectIdStr, userId: targetUserId, role: role ?? 'developer' });
 
+      try {
+        await logPermissionEvent({ projectId: projectIdStr, userId: req.auth.userId, action: 'invite', resourceId: targetUserId })
+      } catch {}
+
       res.status(201).json({ ok: true });
     } catch (err) {
       next(err);
@@ -161,6 +166,10 @@ projectsRouter.delete(
         .where(
           and(eq(projectMembers.projectId, projectIdStr), eq(projectMembers.userId, targetUserId)),
         );
+
+      try {
+        await logPermissionEvent({ projectId: projectIdStr, userId: req.auth.userId, action: 'remove', resourceId: targetUserId })
+      } catch {}
 
       res.json({ ok: true });
     } catch (err) {
