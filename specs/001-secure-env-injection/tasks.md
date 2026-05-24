@@ -173,7 +173,7 @@ description: 'Task list for Secure Environment Variable Distribution and Runtime
 
 ## Final Phase: MVP Validation
 
-- [ ] T076 Validate MVP completion criteria: authentication, device registration, project creation/linking, secret management, secret retrieval, and `fermer run` (validation checklist in quickstart.md)
+- [x] T076 Validate MVP completion criteria: authentication, device registration, project creation/linking, secret management, secret retrieval, and `fermer run` (validation checklist in quickstart.md)
 
 ---
 
