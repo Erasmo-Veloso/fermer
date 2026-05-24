@@ -154,10 +154,10 @@ description: 'Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 17: Documentation
 
-- [ ] T067 Create installation guide (docs/installation.md)
-- [ ] T068 Create CLI usage documentation with examples (docs/cli-usage.md)
-- [ ] T069 Create security documentation covering threat model and limitations (docs/security.md)
-- [ ] T070 Create contribution guide and coding conventions (docs/contributing.md)
+- [x] T067 Create installation guide (docs/installation.md)
+- [x] T068 Create CLI usage documentation with examples (docs/cli-usage.md)
+- [x] T069 Create security documentation covering threat model and limitations (docs/security.md)
+- [x] T070 Create contribution guide and coding conventions (docs/contributing.md)
 
 ---
 
