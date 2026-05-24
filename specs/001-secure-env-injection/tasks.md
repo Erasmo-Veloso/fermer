@@ -111,9 +111,9 @@ description: 'Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 12: CLI Secret Commands (US4)
 
-- [ ] T049 [US4] Implement `fermer secrets list` to show metadata only (apps/cli/src/commands/secrets/list.ts)
-- [ ] T050 [US4] Implement `fermer secrets pull` to retrieve encrypted secrets and store in encrypted cache (apps/cli/src/commands/secrets/pull.ts)
-- [ ] T051 [US4] Implement `fermer secrets sync` to synchronize updated secrets (apps/cli/src/commands/secrets/sync.ts)
+- [x] T049 [US4] Implement `fermer secrets list` to show metadata only (apps/cli/src/commands/secrets/list.ts)
+- [x] T050 [US4] Implement `fermer secrets pull` to retrieve encrypted secrets and store in encrypted cache (apps/cli/src/commands/secrets/pull.ts)
+- [x] T051 [US4] Implement `fermer secrets sync` to synchronize updated secrets (apps/cli/src/commands/secrets/sync.ts)
 
 ---
 

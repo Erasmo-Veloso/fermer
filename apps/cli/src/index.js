@@ -128,7 +128,96 @@ async function main(argv = process.argv.slice(2)) {
       }
       break;
     }
-    case 'secrets':
+    case 'secrets': {
+      const [sub, ...srest] = rest;
+      switch (sub) {
+        case 'list': {
+          const { listSecrets } = require('./commands/secrets/list.js');
+          const [environmentId] = srest;
+          try {
+            const localCfg = (() => {
+              try {
+                return require(process.cwd() + '/.fermer/config.json');
+              } catch {
+                return null;
+              }
+            })();
+            const projectId = localCfg?.projectId;
+            listSecrets({ projectId, environmentId })
+              .then((rows) => {
+                console.log(formatSection('fermer secrets list'));
+                console.log(JSON.stringify(rows, null, 2));
+              })
+              .catch((err) => {
+                console.error(formatError(err instanceof Error ? err.message : String(err)));
+                process.exitCode = 1;
+              });
+          } catch (err) {
+            console.error(formatError(err instanceof Error ? err.message : String(err)));
+            process.exitCode = 1;
+          }
+          break;
+        }
+        case 'pull': {
+          const { pullSecrets } = require('./commands/secrets/pull.js');
+          const [environmentId] = srest;
+          try {
+            const localCfg = (() => {
+              try {
+                return require(process.cwd() + '/.fermer/config.json');
+              } catch {
+                return null;
+              }
+            })();
+            const projectId = localCfg?.projectId;
+            pullSecrets({ projectId, environmentId })
+              .then((out) => {
+                console.log(formatSection('fermer secrets pull'));
+                console.log(formatTip(`Wrote ${out.count} secrets to ${out.path}`));
+              })
+              .catch((err) => {
+                console.error(formatError(err instanceof Error ? err.message : String(err)));
+                process.exitCode = 1;
+              });
+          } catch (err) {
+            console.error(formatError(err instanceof Error ? err.message : String(err)));
+            process.exitCode = 1;
+          }
+          break;
+        }
+        case 'sync': {
+          const { syncSecrets } = require('./commands/secrets/sync.js');
+          const [environmentId] = srest;
+          try {
+            const localCfg = (() => {
+              try {
+                return require(process.cwd() + '/.fermer/config.json');
+              } catch {
+                return null;
+              }
+            })();
+            const projectId = localCfg?.projectId;
+            syncSecrets({ projectId, environmentId })
+              .then((out) => {
+                console.log(formatSection('fermer secrets sync'));
+                console.log(formatTip(`${out.updatedCount} secrets updated locally.`));
+              })
+              .catch((err) => {
+                console.error(formatError(err instanceof Error ? err.message : String(err)));
+                process.exitCode = 1;
+              });
+          } catch (err) {
+            console.error(formatError(err instanceof Error ? err.message : String(err)));
+            process.exitCode = 1;
+          }
+          break;
+        }
+        default:
+          console.log(formatSection('fermer secrets'));
+          console.log(formatTip('Usage: fermer secrets <list|pull|sync> <environmentId>'));
+      }
+      break;
+    }
     case 'run':
       console.log(formatSection(`fermer ${command}`));
       console.log(
