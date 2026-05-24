@@ -143,12 +143,12 @@ description: 'Task list for Secure Environment Variable Distribution and Runtime
 
 ## Phase 16: Testing
 
-- [ ] T061 Configure test runner and CI test matrix (vitest/jest config at repo root)
-- [ ] T062 Create crypto unit tests (packages/crypto/tests)
-- [ ] T063 Create authentication integration tests (apps/server/tests/auth)
-- [ ] T064 Create permission/authorization tests (apps/server/tests/permissions)
-- [ ] T065 Create runtime injection tests (apps/cli/tests/injection)
-- [ ] T066 Create end-to-end onboarding and `fermer run` tests (tests/e2e)
+- [x] T061 Configure test runner and CI test matrix (vitest/jest config at repo root)
+- [x] T062 Create crypto unit tests (packages/crypto/tests)
+- [x] T063 Create authentication integration tests (apps/server/tests/auth)
+- [x] T064 Create permission/authorization tests (apps/server/tests/permissions)
+- [x] T065 Create runtime injection tests (apps/cli/tests/injection)
+- [x] T066 Create end-to-end onboarding and `fermer run` tests (tests/e2e)
 
 ---
 
