@@ -69,19 +69,23 @@ secretsRouter.post(
         })
         .returning();
 
-      res
-        .status(201)
-        .json({
-          ok: true,
-          secret: {
-            id: created.id,
-            name: created.name,
-            version: created.version,
-            createdAt: created.createdAt,
-          },
-        });
+      res.status(201).json({
+        ok: true,
+        secret: {
+          id: created.id,
+          name: created.name,
+          version: created.version,
+          createdAt: created.createdAt,
+        },
+      });
       try {
-        await logSecretEvent({ projectId, userId: req.auth.userId, deviceId: req.auth.deviceId, action: 'create', resourceId: created.id })
+        await logSecretEvent({
+          projectId,
+          userId: req.auth.userId,
+          deviceId: req.auth.deviceId,
+          action: 'create',
+          resourceId: created.id,
+        });
       } catch {
         // ignore audit errors
       }
@@ -157,7 +161,13 @@ secretsRouter.put(
         secret: { id: updated.id, version: updated.version, updatedAt: updated.updatedAt },
       });
       try {
-        await logSecretEvent({ projectId: String(existing.projectId), userId: req.auth.userId, deviceId: req.auth.deviceId, action: 'update', resourceId: updated.id })
+        await logSecretEvent({
+          projectId: String(existing.projectId),
+          userId: req.auth.userId,
+          deviceId: req.auth.deviceId,
+          action: 'update',
+          resourceId: updated.id,
+        });
       } catch {
         // ignore
       }
@@ -199,7 +209,13 @@ secretsRouter.delete('/:secretId', requireAuth, async (req: AuthenticatedRequest
     await db.delete(secrets).where(eq(secrets.id, secretIdStr));
     // TODO: audit log
     try {
-      await logSecretEvent({ projectId: String(existing.projectId), userId: req.auth.userId, deviceId: req.auth.deviceId, action: 'delete', resourceId: existing.id })
+      await logSecretEvent({
+        projectId: String(existing.projectId),
+        userId: req.auth.userId,
+        deviceId: req.auth.deviceId,
+        action: 'delete',
+        resourceId: existing.id,
+      });
     } catch {}
     res.status(204).send();
   } catch (err) {
@@ -278,7 +294,13 @@ secretsRouter.get('/:secretId', requireAuth, async (req: AuthenticatedRequest, r
       },
     });
     try {
-      await logSecretEvent({ projectId: String(existing.projectId), userId: req.auth.userId, deviceId: req.auth.deviceId, action: 'retrieve', resourceId: existing.id })
+      await logSecretEvent({
+        projectId: String(existing.projectId),
+        userId: req.auth.userId,
+        deviceId: req.auth.deviceId,
+        action: 'retrieve',
+        resourceId: existing.id,
+      });
     } catch {}
   } catch (err) {
     next(err);

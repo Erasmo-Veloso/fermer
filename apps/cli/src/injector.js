@@ -18,7 +18,8 @@ function decryptAesGcm(iv_b64, ciphertext_b64, tag_b64, keyBuf) {
 
 async function loadSecrets(environmentId) {
   const p = secretsFilePath(environmentId);
-  if (!fs.existsSync(p)) throw new Error(`No local secrets file found for environment ${environmentId}`);
+  if (!fs.existsSync(p))
+    throw new Error(`No local secrets file found for environment ${environmentId}`);
   const raw = fs.readFileSync(p, 'utf8');
   try {
     return JSON.parse(raw);

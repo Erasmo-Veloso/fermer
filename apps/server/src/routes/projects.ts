@@ -67,17 +67,15 @@ projectsRouter.post(
         role: 'admin',
       });
 
-      res
-        .status(201)
-        .json({
-          ok: true,
-          project: {
-            id: created.id,
-            name: created.name,
-            slug: created.slug,
-            createdAt: created.createdAt,
-          },
-        });
+      res.status(201).json({
+        ok: true,
+        project: {
+          id: created.id,
+          name: created.name,
+          slug: created.slug,
+          createdAt: created.createdAt,
+        },
+      });
     } catch (err) {
       next(err);
     }
@@ -122,7 +120,12 @@ projectsRouter.post(
         .values({ projectId: projectIdStr, userId: targetUserId, role: role ?? 'developer' });
 
       try {
-        await logPermissionEvent({ projectId: projectIdStr, userId: req.auth.userId, action: 'invite', resourceId: targetUserId })
+        await logPermissionEvent({
+          projectId: projectIdStr,
+          userId: req.auth.userId,
+          action: 'invite',
+          resourceId: targetUserId,
+        });
       } catch {}
 
       res.status(201).json({ ok: true });
@@ -168,7 +171,12 @@ projectsRouter.delete(
         );
 
       try {
-        await logPermissionEvent({ projectId: projectIdStr, userId: req.auth.userId, action: 'remove', resourceId: targetUserId })
+        await logPermissionEvent({
+          projectId: projectIdStr,
+          userId: req.auth.userId,
+          action: 'remove',
+          resourceId: targetUserId,
+        });
       } catch {}
 
       res.json({ ok: true });

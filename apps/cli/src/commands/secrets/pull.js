@@ -24,17 +24,26 @@ async function pullSecrets({ projectId, environmentId }) {
   const listUrl = `${baseUrl}/api/secrets?projectId=${encodeURIComponent(projectId)}&environmentId=${encodeURIComponent(
     environmentId,
   )}`;
-  const listRes = await fetch(listUrl, { headers: { authorization: `Bearer ${tokens.accessToken}` } });
+  const listRes = await fetch(listUrl, {
+    headers: { authorization: `Bearer ${tokens.accessToken}` },
+  });
   const listPayload = await listRes.json().catch(() => null);
   if (!listRes.ok) throw new Error(listPayload?.message || 'Failed to list secrets');
 
   const secrets = [];
   for (const s of listPayload.secrets || []) {
     const getUrl = `${baseUrl}/api/secrets/${encodeURIComponent(s.id)}`;
-    const getRes = await fetch(getUrl, { headers: { authorization: `Bearer ${tokens.accessToken}` } });
+    const getRes = await fetch(getUrl, {
+      headers: { authorization: `Bearer ${tokens.accessToken}` },
+    });
     const getPayload = await getRes.json().catch(() => null);
     if (!getRes.ok) throw new Error(getPayload?.message || `Failed to fetch secret ${s.id}`);
-    secrets.push({ id: getPayload.secret.id, name: getPayload.secret.name, version: getPayload.secret.version, encryptedValue: getPayload.secret.encryptedValue });
+    secrets.push({
+      id: getPayload.secret.id,
+      name: getPayload.secret.name,
+      version: getPayload.secret.version,
+      encryptedValue: getPayload.secret.encryptedValue,
+    });
   }
 
   const dir = ensureSecretsDir();
