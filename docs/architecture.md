@@ -9,7 +9,8 @@ Fermer is a single Node.js CLI application that manages encrypted secrets stored
 ```
 fermer/
   src/
-    cli.ts                 # Entry point, argument parsing, command dispatch
+    cli.ts                 # Entry point: help/version, dynamic dispatch to commands/
+    cli-args.ts            # Pure argument parsing (COMMANDS, extractEnv, readVersion)
     types.ts               # Shared TypeScript types
     crypto/
       index.ts             # AES-256-GCM encrypt/decrypt, ECDH key derivation
@@ -169,6 +170,23 @@ This is an atomic operation — if it fails partway, no files are written.
 ### Argument Parsing
 
 No external dependency. The CLI uses `process.argv` directly with a simple pattern-matching dispatcher. Each command is a standalone module that exports an `execute` function.
+
+Parsing lives in `cli-args.ts`, separate from `cli.ts`. `cli.ts` has a shebang
+and dynamically `import()`s command modules, and Vitest's SSR transform cannot
+parse a file that has both — it injects a helper import above the shebang,
+which breaks the shebang's must-be-the-first-bytes requirement. Keeping the
+shebang and the dynamic import in a file nothing imports for testing, and the
+pure logic in a plain module, sidesteps that without losing test coverage.
+
+`extractEnv` treats `-e`/`--env` differently depending on the command: for
+every command except `run`, the flag is recognized anywhere in the argument
+list. For `run`, only a *leading* `-e`/`--env` is recognized — the first
+token that is not the flag or its value ends fermer's own parsing, and
+everything from there is passed through to the child process untouched. This
+matters because `run`'s arguments are an arbitrary external command line,
+which can itself use `-e` (e.g. `fermer run node -e "code"` — `node -e` is
+Node's own eval flag). Put fermer's `-e`/`--env` before the command being
+run: `fermer run -e production npm start`.
 
 ### Error Handling
 

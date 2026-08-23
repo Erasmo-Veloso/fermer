@@ -21,7 +21,8 @@ Read these before writing any code:
 
 ```
 src/
-  cli.ts           # Entry point
+  cli.ts           # Entry point (shebang, dynamic dispatch)
+  cli-args.ts      # Pure argument parsing, imported by tests
   types.ts         # All shared interfaces
   crypto/          # Cryptographic primitives (AES-GCM, ECDH, HKDF, key wrapping)
   vault/           # Vault read/write, secret CRUD, file I/O
