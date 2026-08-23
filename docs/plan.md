@@ -244,13 +244,21 @@ function listMembers(identity: Identity): Array<{ fingerprint: string; label: st
 
 **`revokeMember`:**
 1. Check the fingerprint exists in `members.json`
-2. Refuse to revoke self (must have at least one member)
+2. Refuse the revocation only when it would leave the project with zero
+   members. Revoking yourself is allowed while other members remain, since
+   that is how someone leaves a project; the CLI should confirm before doing
+   it because the caller loses their own access.
 3. Generate a NEW random project key
 4. Decrypt ALL secrets in ALL environments with the old project key
 5. Re-encrypt ALL secrets with the new project key
 6. Re-wrap the new project key for each REMAINING member
 7. Remove the revoked member
-8. Write both `vault.json` and `members.json` atomically (write both to temp, then rename both)
+8. Write both `vault.json` and `members.json` through
+   `writeVaultAndMembers` in `src/vault/format.ts`, which stages both files
+   to temp paths and then renames both. Never write them with two separate
+   calls: between the writes the vault is already re-encrypted under the new
+   project key while `members.json` still holds the old wrapped keys, which
+   locks out every member.
 
 **`listMembers`:**
 1. Read `members.json`, return array of member info
@@ -260,8 +268,13 @@ Test in `tests/trust.test.ts`:
 - Trusted member can decrypt secrets
 - Revoke removes member
 - Revoked member cannot decrypt secrets (old wrapped key fails)
-- Cannot revoke self if only member
+- Cannot revoke the last remaining member
 - After revocation, remaining members can still decrypt
+- A file containing a private key is refused and nothing is written
+- A public key rewritten to CRLF in transit still resolves to the right member
+- A key on the wrong curve, or a file that is not a key, is refused
+- Secret `updatedAt` values survive rotation unchanged
+- No `.tmp` files are left in `.fermer/` after rotation
 
 ---
 
@@ -397,6 +410,19 @@ hardening rather than a data-loss fix.
 missing, `init` refuses to run. Distinguish the two cases: if `.fermer/`
 is absent, suggest `fermer init`; if it exists but a file is missing,
 say the vault is incomplete and name the missing file.
+
+**Partial init leaves an unusable directory.** `initVault` writes
+config, vault, and members in sequence. If it fails after the first
+write, `.fermer/` exists so `init` refuses to run again, while every
+other command fails because `members.json` is missing. Stage all three
+files and only then move them into place, or remove a partially written
+`.fermer/` when init fails.
+
+**Unknown environments are created silently.** `setSecret` accepts any
+environment name, so `fermer set X=1 -e prodution` writes a secret into a
+new misspelled environment instead of failing. `config.json` already
+carries the allowed list; validate against it and require an explicit
+flag to add a new environment.
 
 ### T22 — Add `--json` output flag
 
