@@ -17,6 +17,7 @@ Commands:
 
 Options:
   -e, --env <name>      Target environment (default: development)
+  --json                Machine-readable output (list, members, export)
   -h, --help            Show this help
   --version             Show version
 

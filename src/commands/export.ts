@@ -18,11 +18,20 @@ export function formatValue(value: string): string {
   return `"${escaped}"`;
 }
 
-export async function execute(_args: string[], opts: { env: string }): Promise<void> {
+export async function execute(args: string[], opts: { env: string }): Promise<void> {
   const identity = loadIdentity();
   const secrets = getSecrets(opts.env, identity);
+  const keys = Object.keys(secrets).sort();
 
-  for (const key of Object.keys(secrets).sort()) {
+  if (args.includes('--json')) {
+    // JSON.stringify escapes every value correctly on its own, so the
+    // line-oriented quoting below does not apply here.
+    const ordered = Object.fromEntries(keys.map((key) => [key, secrets[key]]));
+    process.stdout.write(`${JSON.stringify(ordered, null, 2)}\n`);
+    return;
+  }
+
+  for (const key of keys) {
     process.stdout.write(`${key}=${formatValue(secrets[key])}\n`);
   }
 }
