@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { pathToFileURL } from 'node:url';
 import { COMMANDS, readVersion, extractEnv } from './cli-args.js';
 
 const HELP_TEXT = `Usage: fermer <command> [options]
@@ -50,12 +49,7 @@ async function main(): Promise<void> {
   await commandModule.execute(rest, { env });
 }
 
-// Guarded so cli-args.ts (and only cli-args.ts) needs to be imported in tests
-// without triggering a real CLI run as a side effect.
-const isMainModule = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isMainModule) {
-  main().catch((err: unknown) => {
-    process.stderr.write(`Error: ${(err as Error).message}\n`);
-    process.exitCode = 1;
-  });
-}
+main().catch((err: unknown) => {
+  process.stderr.write(`Error: ${(err as Error).message}\n`);
+  process.exitCode = 1;
+});
