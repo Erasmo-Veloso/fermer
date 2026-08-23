@@ -1,13 +1,9 @@
 import { generateKeyPair, deriveSharedSecret, deriveKey, encryptAesGcm, decryptAesGcm } from './index.js';
+import type { WrappedKey } from '../types.js';
 
 const WRAP_INFO = 'fermer-wrap-v1';
 
-export interface WrappedKey {
-  ephemeralPublicKey: string;
-  iv: string;
-  ciphertext: string;
-  tag: string;
-}
+export type { WrappedKey };
 
 export function wrapProjectKey(projectKey: Buffer, memberPublicKeyPem: string): WrappedKey {
   const ephemeral = generateKeyPair();

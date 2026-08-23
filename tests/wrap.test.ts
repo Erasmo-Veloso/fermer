@@ -23,12 +23,26 @@ describe('crypto/wrap: project key wrapping via ECDH', () => {
     expect(() => unwrapProjectKey(wrapped, attacker.privateKey)).toThrow();
   });
 
-  it('fails to unwrap if the ciphertext is tampered with', () => {
+  it('fails to unwrap if a single bit of the ciphertext is flipped', () => {
     const member = generateKeyPair();
     const projectKey = randomKey(32);
 
     const wrapped = wrapProjectKey(projectKey, member.publicKey);
-    const tampered = { ...wrapped, ciphertext: Buffer.from('tampered-data').toString('base64') };
+    const ciphertext = Buffer.from(wrapped.ciphertext, 'base64');
+    ciphertext[0] ^= 0x01;
+    const tampered = { ...wrapped, ciphertext: ciphertext.toString('base64') };
+
+    expect(() => unwrapProjectKey(tampered, member.privateKey)).toThrow();
+  });
+
+  it('fails to unwrap if a single bit of the auth tag is flipped', () => {
+    const member = generateKeyPair();
+    const projectKey = randomKey(32);
+
+    const wrapped = wrapProjectKey(projectKey, member.publicKey);
+    const tag = Buffer.from(wrapped.tag, 'base64');
+    tag[0] ^= 0x01;
+    const tampered = { ...wrapped, tag: tag.toString('base64') };
 
     expect(() => unwrapProjectKey(tampered, member.privateKey)).toThrow();
   });
