@@ -56,9 +56,98 @@ export function ensureGitAttributes(): 'created' | 'updated' | 'unchanged' {
   return existing === undefined ? 'created' : 'updated';
 }
 
-function readJson<T>(path: string, kind: string): T {
+const SUPPORTED_VERSION = 1;
+
+// A missing file means two very different things. If .fermer/ is absent the
+// project was never initialized, so "fermer init" is the fix. If .fermer/ is
+// there but a file inside it is gone, init would refuse to run and the real
+// remedy is restoring the file from Git, so saying "run init" would send the
+// user down a dead end.
+function missingFileMessage(path: string, kind: string): string {
+  if (!existsSync(fermerDir())) {
+    return `No .fermer/ directory in this repository. Run "fermer init" first.`;
+  }
+  return `${kind} is missing at ${path} but .fermer/ exists, so the vault is incomplete. Restore the file from Git history.`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function fail(kind: string, path: string, detail: string): never {
+  throw new Error(`${kind} at ${path} is malformed: ${detail}`);
+}
+
+function assertEnvelope(data: unknown, kind: string, path: string): Record<string, unknown> {
+  if (!isRecord(data)) {
+    fail(kind, path, 'expected a JSON object at the top level.');
+  }
+  if (data.version !== SUPPORTED_VERSION) {
+    throw new Error(
+      `${kind} at ${path} has version ${JSON.stringify(data.version)}, but this build of fermer only understands version ${SUPPORTED_VERSION}. Upgrade fermer.`,
+    );
+  }
+  return data;
+}
+
+function assertEncryptedValue(value: unknown, kind: string, path: string, where: string): void {
+  if (!isRecord(value)) fail(kind, path, `${where} is not an object.`);
+  for (const field of ['iv', 'ciphertext', 'tag']) {
+    if (typeof value[field] !== 'string') fail(kind, path, `${where} is missing a string "${field}".`);
+  }
+}
+
+function validateConfig(data: unknown, path: string): ConfigFile {
+  const kind = 'Fermer config';
+  const record = assertEnvelope(data, kind, path);
+  if (!Array.isArray(record.environments) || record.environments.some((e) => typeof e !== 'string')) {
+    fail(kind, path, '"environments" must be an array of strings.');
+  }
+  if (typeof record.defaultEnvironment !== 'string') {
+    fail(kind, path, '"defaultEnvironment" must be a string.');
+  }
+  return record as unknown as ConfigFile;
+}
+
+function validateVault(data: unknown, path: string): VaultFile {
+  const kind = 'Fermer vault';
+  const record = assertEnvelope(data, kind, path);
+  if (!isRecord(record.environments)) {
+    fail(kind, path, '"environments" must be an object.');
+  }
+  for (const [env, entry] of Object.entries(record.environments)) {
+    if (!isRecord(entry) || !isRecord(entry.secrets)) {
+      fail(kind, path, `environment "${env}" must have a "secrets" object.`);
+    }
+    for (const [key, value] of Object.entries(entry.secrets)) {
+      assertEncryptedValue(value, kind, path, `secret "${key}" in "${env}"`);
+    }
+  }
+  return record as unknown as VaultFile;
+}
+
+function validateMembers(data: unknown, path: string): MembersFile {
+  const kind = 'Fermer members file';
+  const record = assertEnvelope(data, kind, path);
+  if (!isRecord(record.members)) {
+    fail(kind, path, '"members" must be an object.');
+  }
+  for (const [fingerprint, entry] of Object.entries(record.members)) {
+    const where = `member "${fingerprint}"`;
+    if (!isRecord(entry)) fail(kind, path, `${where} is not an object.`);
+    if (typeof entry.publicKey !== 'string') fail(kind, path, `${where} is missing a string "publicKey".`);
+    if (typeof entry.label !== 'string') fail(kind, path, `${where} is missing a string "label".`);
+    assertEncryptedValue(entry.wrappedKey, kind, path, `${where}'s wrappedKey`);
+    if (typeof (entry.wrappedKey as Record<string, unknown>).ephemeralPublicKey !== 'string') {
+      fail(kind, path, `${where}'s wrappedKey is missing a string "ephemeralPublicKey".`);
+    }
+  }
+  return record as unknown as MembersFile;
+}
+
+function readJson<T>(path: string, kind: string, validate: (data: unknown, path: string) => T): T {
   if (!existsSync(path)) {
-    throw new Error(`${kind} not found at ${path}. Run "fermer init" first.`);
+    throw new Error(missingFileMessage(path, kind));
   }
   let raw: string;
   try {
@@ -66,11 +155,14 @@ function readJson<T>(path: string, kind: string): T {
   } catch (err) {
     throw new Error(`Failed to read ${kind} at ${path}: ${(err as Error).message}`);
   }
+
+  let parsed: unknown;
   try {
-    return JSON.parse(raw) as T;
+    parsed = JSON.parse(raw);
   } catch {
     throw new Error(`${kind} at ${path} is not valid JSON.`);
   }
+  return validate(parsed, path);
 }
 
 function stageJson(path: string, data: unknown): string {
@@ -85,7 +177,7 @@ function writeJsonAtomic(path: string, data: unknown): void {
 }
 
 export function readConfig(): ConfigFile {
-  return readJson<ConfigFile>(configPath(), 'Fermer config');
+  return readJson(configPath(), 'Fermer config', validateConfig);
 }
 
 export function writeConfig(config: ConfigFile): void {
@@ -93,7 +185,7 @@ export function writeConfig(config: ConfigFile): void {
 }
 
 export function readVault(): VaultFile {
-  return readJson<VaultFile>(vaultPath(), 'Fermer vault');
+  return readJson(vaultPath(), 'Fermer vault', validateVault);
 }
 
 export function writeVault(vault: VaultFile): void {
@@ -101,7 +193,7 @@ export function writeVault(vault: VaultFile): void {
 }
 
 export function readMembers(): MembersFile {
-  return readJson<MembersFile>(membersPath(), 'Fermer members file');
+  return readJson(membersPath(), 'Fermer members file', validateMembers);
 }
 
 export function writeMembers(members: MembersFile): void {
