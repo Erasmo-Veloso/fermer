@@ -203,7 +203,45 @@ All errors write to stderr and exit with code 1. Errors include:
 2. Merge with `process.env` (secrets override existing vars)
 3. Spawn the child command with `child_process.spawn` using the merged env
 4. Forward stdin/stdout/stderr
-5. Exit with the child's exit code
+5. Exit with the child's exit code (128 if the child was killed by a signal)
+
+**Never spawn with `shell: true`.** A shell re-parses the command line, which
+both corrupts arguments (`node -e "console.log('a b')"` loses its quoting) and
+turns any argument containing `&`, `|`, or `>` into a second command. That
+second command would run with the decrypted secrets already in its
+environment, so a `fermer run` wrapping an argument derived from untrusted
+input (a branch name, a PR title) would be an arbitrary-execution path that
+does not exist without fermer.
+
+`buildSpawnPlan` in `src/commands/run.ts` therefore resolves the command
+itself:
+
+- Anything that resolves to a real executable is spawned directly with no
+  shell, so argv reaches the child byte-for-byte as given.
+- Only `.cmd`/`.bat` shims need `cmd.exe`, because Node refuses to exec them
+  directly (`EINVAL`) and cannot find them by bare name (`ENOENT`). For those,
+  fermer invokes `cmd.exe /d /s /c` with `windowsVerbatimArguments: true` and
+  builds the command line itself: each argument is double-quoted with `\"`
+  escapes for the target program's own parser, then `^`-escaped so `cmd.exe`
+  cannot reinterpret a metacharacter as syntax.
+
+### Secret Names
+
+`setSecret` accepts only `[A-Za-z_][A-Za-z0-9_]*`. Keys are emitted as bare
+`KEY=VALUE` by `export` and become environment variable names in the child
+process, so a name with a space or newline either cannot be read back or is
+mangled by whatever consumes it. Validation lives in the vault layer so it
+applies no matter which entry point sets the secret.
+
+### Export Format
+
+Values that cannot survive a bare `KEY=VALUE` line — those containing a
+newline, quote, backslash, or padding whitespace — are emitted double-quoted
+with `\n`, `\r`, `\"`, and `\\` escapes, the form dotenv and compatible
+parsers read back. Emitting such a value bare would let everything after a
+newline parse as a further `KEY=VALUE` line, so a single secret could smuggle
+extra variables into whatever consumes the output. Keys are sorted so the
+output diffs cleanly.
 
 ## Dependencies
 
