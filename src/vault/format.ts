@@ -220,20 +220,21 @@ function writeFileDurable(path: string, contents: string): void {
   }
 }
 
-function stageJson(path: string, data: unknown): string {
+function stageContents(path: string, contents: string): string {
   mkdirSync(dirname(path), { recursive: true });
   const tmpPath = `${path}.${process.pid}.tmp`;
-  writeFileDurable(tmpPath, serialize(data));
+  writeFileDurable(tmpPath, contents);
   return tmpPath;
+}
+
+function stageJson(path: string, data: unknown): string {
+  return stageContents(path, serialize(data));
 }
 
 function writeJsonAtomic(path: string, kind: string, data: unknown): void {
   assertUnchangedSinceRead(path, kind);
   const contents = serialize(data);
-  const tmpPath = `${path}.${process.pid}.tmp`;
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileDurable(tmpPath, contents);
-  renameSync(tmpPath, path);
+  renameSync(stageContents(path, contents), path);
   digestsAtRead.set(path, digestOf(contents));
 }
 
