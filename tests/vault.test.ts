@@ -3,7 +3,15 @@ import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createIdentity } from '../src/identity/index';
-import { initVault, setSecret, unsetSecret, listSecrets, getSecrets } from '../src/vault/index';
+import {
+  initVault,
+  setSecret,
+  unsetSecret,
+  listSecrets,
+  getSecrets,
+  addEnvironment,
+  listEnvironments,
+} from '../src/vault/index';
 import { fermerDir } from '../src/vault/format';
 
 let repoRoot: string;
@@ -175,6 +183,51 @@ describe('vault: init and secret CRUD', () => {
     setSecret('KEY2', 'v', 'development', identity);
 
     expect(listSecrets('development', identity).sort()).toEqual(['DATABASE_URL', 'KEY2', '_PRIVATE']);
+  });
+
+  it('refuses to touch an environment that is not in the config', () => {
+    const identity = createIdentity('alice@workstation');
+    initVault(identity);
+
+    expect(() => setSecret('KEY', 'v', 'prodution', identity)).toThrow(/Unknown environment "prodution"/);
+    expect(() => listSecrets('prodution', identity)).toThrow(/Unknown environment/);
+    expect(() => getSecrets('prodution', identity)).toThrow(/Unknown environment/);
+    expect(() => unsetSecret('KEY', 'prodution', identity)).toThrow(/Unknown environment/);
+  });
+
+  it('names the known environments when rejecting an unknown one', () => {
+    const identity = createIdentity('alice@workstation');
+    initVault(identity);
+
+    expect(() => setSecret('KEY', 'v', 'typo', identity)).toThrow(/development, staging, production/);
+  });
+
+  it('adds a new environment on request and then accepts it', () => {
+    const identity = createIdentity('alice@workstation');
+    initVault(identity);
+
+    expect(addEnvironment('preview', identity)).toBe(true);
+    expect(listEnvironments()).toContain('preview');
+
+    setSecret('KEY', 'v', 'preview', identity);
+    expect(getSecrets('preview', identity).KEY).toBe('v');
+  });
+
+  it('reports that an already-known environment was not added', () => {
+    const identity = createIdentity('alice@workstation');
+    initVault(identity);
+
+    expect(addEnvironment('staging', identity)).toBe(false);
+    expect(listEnvironments().filter((e) => e === 'staging')).toHaveLength(1);
+  });
+
+  it('rejects an invalid environment name', () => {
+    const identity = createIdentity('alice@workstation');
+    initVault(identity);
+
+    expect(() => addEnvironment('has space', identity)).toThrow(/not a valid environment name/);
+    expect(() => addEnvironment('-leading-dash', identity)).toThrow();
+    expect(() => addEnvironment('', identity)).toThrow();
   });
 
   it('fails all operations for an identity not present in members', () => {

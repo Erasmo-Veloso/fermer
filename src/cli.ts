@@ -6,7 +6,7 @@ const HELP_TEXT = `Usage: fermer <command> [options]
 Commands:
   identity              Create or show your cryptographic identity
   init                  Initialize Fermer in the current repository
-  set KEY=VALUE         Add or update a secret
+  set KEY=VALUE         Add or update a secret (--new-env to add the env)
   unset KEY             Remove a secret
   list                  List secret keys
   run <command...>      Run a command with secrets injected

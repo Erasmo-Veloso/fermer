@@ -2,6 +2,8 @@ import { randomKey, encryptAesGcm, decryptAesGcm } from '../crypto/index.js';
 import { wrapProjectKey, unwrapProjectKey } from '../crypto/wrap.js';
 import { computeFingerprint, canonicalizePublicKey } from '../crypto/device.js';
 import {
+  readConfig,
+  writeConfig,
   readVault,
   writeVault,
   readMembers,
@@ -22,12 +24,47 @@ const DEFAULT_ENVIRONMENTS = ['development', 'staging', 'production'];
 // refused at the point it enters the vault rather than at each call site.
 const VALID_SECRET_KEY = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
+const VALID_ENVIRONMENT_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+
 function assertValidKey(key: string): void {
   if (!VALID_SECRET_KEY.test(key)) {
     throw new Error(
       `"${key}" is not a valid secret name. Use letters, digits, and underscores, starting with a letter or underscore.`,
     );
   }
+}
+
+// Without this check a typo in -e silently creates a parallel environment:
+// "fermer set X=1 -e prodution" would succeed, and the secret would simply not
+// be there when production is read. Adding an environment is now something the
+// user has to ask for.
+function assertKnownEnvironment(env: string): void {
+  const config = readConfig();
+  if (!config.environments.includes(env)) {
+    throw new Error(
+      `Unknown environment "${env}". Known: ${config.environments.join(', ')}. Add it with "fermer set KEY=VALUE -e ${env} --new-env".`,
+    );
+  }
+}
+
+export function addEnvironment(name: string, identity: Identity): boolean {
+  getProjectKey(identity);
+  if (!VALID_ENVIRONMENT_NAME.test(name)) {
+    throw new Error(
+      `"${name}" is not a valid environment name. Use letters, digits, dashes, and underscores.`,
+    );
+  }
+
+  const config = readConfig();
+  if (config.environments.includes(name)) {
+    return false;
+  }
+  writeConfig({ ...config, environments: [...config.environments, name] });
+  return true;
+}
+
+export function listEnvironments(): string[] {
+  return readConfig().environments;
 }
 
 function getProjectKey(identity: Identity): Buffer {
@@ -66,6 +103,7 @@ export function initVault(identity: Identity): 'created' | 'updated' | 'unchange
 
 export function setSecret(key: string, value: string, env: string, identity: Identity): void {
   assertValidKey(key);
+  assertKnownEnvironment(env);
   const projectKey = getProjectKey(identity);
   const vault = readVault();
 
@@ -80,6 +118,7 @@ export function setSecret(key: string, value: string, env: string, identity: Ide
 }
 
 export function unsetSecret(key: string, env: string, identity: Identity): void {
+  assertKnownEnvironment(env);
   getProjectKey(identity); // ensure this identity is authorized before mutating the vault
   const vault = readVault();
 
@@ -92,12 +131,14 @@ export function unsetSecret(key: string, env: string, identity: Identity): void 
 }
 
 export function listSecrets(env: string, identity: Identity): string[] {
+  assertKnownEnvironment(env);
   getProjectKey(identity); // ensure this identity is authorized before revealing key names
   const vault = readVault();
   return Object.keys(vault.environments[env]?.secrets ?? {});
 }
 
 export function getSecrets(env: string, identity: Identity): Record<string, string> {
+  assertKnownEnvironment(env);
   const projectKey = getProjectKey(identity);
   const vault = readVault();
   const secrets = vault.environments[env]?.secrets ?? {};
