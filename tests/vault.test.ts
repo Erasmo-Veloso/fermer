@@ -114,6 +114,28 @@ describe('vault: init and secret CRUD', () => {
     expect(getSecrets('staging', identity)).toEqual({});
   });
 
+  it('rejects secret names that are not valid environment variable names', () => {
+    const identity = createIdentity('alice@workstation');
+    initVault(identity);
+
+    expect(() => setSecret('MY KEY', 'v', 'development', identity)).toThrow(/not a valid secret name/);
+    expect(() => setSecret('1STARTS_WITH_DIGIT', 'v', 'development', identity)).toThrow();
+    expect(() => setSecret('HAS-DASH', 'v', 'development', identity)).toThrow();
+    expect(() => setSecret('HAS\nNEWLINE', 'v', 'development', identity)).toThrow();
+    expect(() => setSecret('', 'v', 'development', identity)).toThrow();
+  });
+
+  it('accepts conventional environment variable names', () => {
+    const identity = createIdentity('alice@workstation');
+    initVault(identity);
+
+    setSecret('DATABASE_URL', 'v', 'development', identity);
+    setSecret('_PRIVATE', 'v', 'development', identity);
+    setSecret('KEY2', 'v', 'development', identity);
+
+    expect(listSecrets('development', identity).sort()).toEqual(['DATABASE_URL', 'KEY2', '_PRIVATE']);
+  });
+
   it('fails all operations for an identity not present in members', () => {
     const owner = createIdentity('alice@workstation');
     initVault(owner);

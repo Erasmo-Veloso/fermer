@@ -16,6 +16,20 @@ import type { Identity, VaultFile, MembersFile } from '../types.js';
 
 const DEFAULT_ENVIRONMENTS = ['development', 'staging', 'production'];
 
+// Keys are written out as bare KEY=VALUE by export, and are passed to child
+// processes as environment variable names. Anything outside the POSIX name
+// shape either cannot be read back or is mangled by the consumer, so it is
+// refused at the point it enters the vault rather than at each call site.
+const VALID_SECRET_KEY = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+function assertValidKey(key: string): void {
+  if (!VALID_SECRET_KEY.test(key)) {
+    throw new Error(
+      `"${key}" is not a valid secret name. Use letters, digits, and underscores, starting with a letter or underscore.`,
+    );
+  }
+}
+
 function getProjectKey(identity: Identity): Buffer {
   const members = readMembers();
   const member = members.members[identity.fingerprint];
@@ -58,6 +72,7 @@ export function initVault(identity: Identity): void {
 }
 
 export function setSecret(key: string, value: string, env: string, identity: Identity): void {
+  assertValidKey(key);
   const projectKey = getProjectKey(identity);
   const vault = readVault();
 
