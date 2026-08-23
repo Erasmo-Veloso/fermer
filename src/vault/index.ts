@@ -2,16 +2,15 @@ import { randomKey, encryptAesGcm, decryptAesGcm } from '../crypto/index.js';
 import { wrapProjectKey, unwrapProjectKey } from '../crypto/wrap.js';
 import { computeFingerprint, canonicalizePublicKey } from '../crypto/device.js';
 import {
-  fermerDir,
-  writeConfig,
   readVault,
   writeVault,
   readMembers,
   writeMembers,
   writeVaultAndMembers,
   ensureGitAttributes,
+  initializeFermerDir,
 } from './format.js';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
 import type { Identity, VaultFile, MembersFile } from '../types.js';
 
@@ -43,33 +42,24 @@ function getProjectKey(identity: Identity): Buffer {
 }
 
 export function initVault(identity: Identity): 'created' | 'updated' | 'unchanged' {
-  if (existsSync(fermerDir())) {
-    throw new Error(`Fermer is already initialized at ${fermerDir()}.`);
-  }
-
   const projectKey = randomKey(32);
-
-  writeConfig({
-    version: 1,
-    environments: DEFAULT_ENVIRONMENTS,
-    defaultEnvironment: 'development',
-  });
-
-  const vault: VaultFile = { version: 1, environments: {} };
-  writeVault(vault);
-
   const wrappedKey = wrapProjectKey(projectKey, identity.publicKey);
-  writeMembers({
-    version: 1,
-    members: {
-      [identity.fingerprint]: {
-        publicKey: identity.publicKey,
-        label: identity.label,
-        wrappedKey,
-        addedAt: new Date().toISOString(),
+
+  initializeFermerDir(
+    { version: 1, environments: DEFAULT_ENVIRONMENTS, defaultEnvironment: DEFAULT_ENVIRONMENTS[0] },
+    { version: 1, environments: {} },
+    {
+      version: 1,
+      members: {
+        [identity.fingerprint]: {
+          publicKey: identity.publicKey,
+          label: identity.label,
+          wrappedKey,
+          addedAt: new Date().toISOString(),
+        },
       },
     },
-  });
+  );
 
   return ensureGitAttributes();
 }

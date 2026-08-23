@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createIdentity } from '../src/identity/index';
@@ -71,6 +71,14 @@ describe('vault: init and secret CRUD', () => {
     const lines = readFileSync(join(repoRoot, '.gitattributes'), 'utf8').split('\n');
     expect(lines).toContain('*.png binary');
     expect(lines).toContain('.fermer/vault.json merge=binary');
+  });
+
+  it('leaves no staging directory behind after init', () => {
+    const identity = createIdentity('alice@workstation');
+    initVault(identity);
+
+    const residue = readdirSync(repoRoot).filter((entry) => entry.startsWith('.fermer.init-'));
+    expect(residue).toEqual([]);
   });
 
   it('refuses to init twice', () => {

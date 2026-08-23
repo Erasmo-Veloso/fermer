@@ -1,4 +1,15 @@
-import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  renameSync,
+  mkdirSync,
+  rmSync,
+  openSync,
+  writeSync,
+  fsyncSync,
+  closeSync,
+} from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import type { ConfigFile, VaultFile, MembersFile } from '../types.js';
 
@@ -165,15 +176,60 @@ function readJson<T>(path: string, kind: string, validate: (data: unknown, path:
   return validate(parsed, path);
 }
 
+function serialize(data: unknown): string {
+  return JSON.stringify(data, null, 2) + '\n';
+}
+
+// Renaming a fully written temp file over the target keeps a torn write from
+// ever being visible to a reader. It does not by itself guarantee the bytes
+// reached the disk before the rename did, so a power loss could surface a
+// renamed but empty file; fsync before closing closes that gap.
+function writeFileDurable(path: string, contents: string): void {
+  const fd = openSync(path, 'w');
+  try {
+    writeSync(fd, contents);
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
+
 function stageJson(path: string, data: unknown): string {
   mkdirSync(dirname(path), { recursive: true });
   const tmpPath = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmpPath, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  writeFileDurable(tmpPath, serialize(data));
   return tmpPath;
 }
 
 function writeJsonAtomic(path: string, data: unknown): void {
   renameSync(stageJson(path, data), path);
+}
+
+// init used to write config, vault, and members one at a time. Failing after
+// the first left .fermer/ present but incomplete, which is the worst state to
+// be in: init refuses to run again because the directory exists, and every
+// other command fails because members.json is missing. Building the directory
+// under a staging name and renaming it into place means .fermer/ either does
+// not exist or is complete.
+export function initializeFermerDir(config: ConfigFile, vault: VaultFile, members: MembersFile): void {
+  const target = fermerDir();
+  if (existsSync(target)) {
+    throw new Error(`Fermer is already initialized at ${target}.`);
+  }
+
+  const staging = `${target}.init-${process.pid}`;
+  rmSync(staging, { recursive: true, force: true });
+  mkdirSync(staging, { recursive: true });
+
+  try {
+    writeFileDurable(join(staging, 'config.json'), serialize(config));
+    writeFileDurable(join(staging, 'vault.json'), serialize(vault));
+    writeFileDurable(join(staging, 'members.json'), serialize(members));
+    renameSync(staging, target);
+  } catch (err) {
+    rmSync(staging, { recursive: true, force: true });
+    throw err;
+  }
 }
 
 export function readConfig(): ConfigFile {
