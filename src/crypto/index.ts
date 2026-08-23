@@ -6,6 +6,7 @@ import {
   diffieHellman,
   createPrivateKey,
   createPublicKey,
+  hkdfSync,
 } from 'node:crypto';
 
 export type KeyPair = { publicKey: string; privateKey: string };
@@ -59,4 +60,10 @@ export function deriveSharedSecret(privateKeyPem: string, otherPublicKeyPem: str
     privateKey: createPrivateKey(privateKeyPem),
     publicKey: createPublicKey(otherPublicKeyPem),
   });
+}
+
+export function deriveKey(sharedSecret: Buffer, info: string, length = 32): Buffer {
+  const salt = Buffer.alloc(32);
+  const derived = hkdfSync('sha256', sharedSecret, salt, Buffer.from(info, 'utf8'), length);
+  return Buffer.from(derived);
 }
