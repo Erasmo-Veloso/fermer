@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { readConfig, readVault, readMembers, fermerDir } from '../src/vault/format';
+import { readConfig, readVault, readMembers, writeVault, fermerDir } from '../src/vault/format';
 
 let repoRoot: string;
 let originalCwd: string;
@@ -48,6 +48,69 @@ describe('format: version validation', () => {
   it('rejects a missing version field', () => {
     writeFermerFile('vault.json', { environments: {} });
     expect(() => readVault()).toThrow(/version undefined/);
+  });
+});
+
+describe('format: concurrent write detection', () => {
+  const wellFormedVault = {
+    version: 1,
+    environments: { development: { secrets: {} } },
+  };
+
+  it('refuses to write when the file changed after it was read', () => {
+    writeFermerFile('vault.json', wellFormedVault);
+    const vault = readVault();
+
+    // Someone else's command lands between our read and our write.
+    writeFermerFile('vault.json', {
+      version: 1,
+      environments: { development: { secrets: { THEIRS: { iv: 'i', ciphertext: 'c', tag: 't', updatedAt: 'now' } } } },
+    });
+
+    vault.environments.development.secrets.MINE = { iv: 'i', ciphertext: 'c', tag: 't', updatedAt: 'now' };
+    expect(() => writeVault(vault)).toThrow(/changed on disk/);
+  });
+
+  it('does not lose the other change when it refuses', () => {
+    writeFermerFile('vault.json', wellFormedVault);
+    const vault = readVault();
+    writeFermerFile('vault.json', {
+      version: 1,
+      environments: { development: { secrets: { THEIRS: { iv: 'i', ciphertext: 'c', tag: 't', updatedAt: 'now' } } } },
+    });
+
+    expect(() => writeVault(vault)).toThrow();
+    expect(Object.keys(readVault().environments.development.secrets)).toEqual(['THEIRS']);
+  });
+
+  it('allows a normal read-modify-write', () => {
+    writeFermerFile('vault.json', wellFormedVault);
+    const vault = readVault();
+
+    vault.environments.development.secrets.MINE = { iv: 'i', ciphertext: 'c', tag: 't', updatedAt: 'now' };
+    writeVault(vault);
+
+    expect(Object.keys(readVault().environments.development.secrets)).toEqual(['MINE']);
+  });
+
+  it('allows two successive writes in the same command', () => {
+    writeFermerFile('vault.json', wellFormedVault);
+    const vault = readVault();
+
+    vault.environments.development.secrets.FIRST = { iv: 'i', ciphertext: 'c', tag: 't', updatedAt: 'now' };
+    writeVault(vault);
+    vault.environments.development.secrets.SECOND = { iv: 'i', ciphertext: 'c', tag: 't', updatedAt: 'now' };
+    writeVault(vault);
+
+    expect(Object.keys(readVault().environments.development.secrets).sort()).toEqual(['FIRST', 'SECOND']);
+  });
+
+  it('refuses to write when the file was deleted after it was read', () => {
+    writeFermerFile('vault.json', wellFormedVault);
+    const vault = readVault();
+    rmSync(join(fermerDir(), 'vault.json'));
+
+    expect(() => writeVault(vault)).toThrow(/changed on disk/);
   });
 });
 

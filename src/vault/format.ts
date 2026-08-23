@@ -11,6 +11,7 @@ import {
   closeSync,
 } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 import type { ConfigFile, VaultFile, MembersFile } from '../types.js';
 
 export function findRepoRoot(): string {
@@ -156,6 +157,29 @@ function validateMembers(data: unknown, path: string): MembersFile {
   return record as unknown as MembersFile;
 }
 
+// Every command reads a file, changes it in memory, and writes it back. If a
+// teammate's command (or a git checkout) rewrites the same file in between, a
+// blind write would silently drop their change. The digest seen at read time is
+// remembered so the write can refuse instead.
+const digestsAtRead = new Map<string, string>();
+
+function digestOf(contents: string): string {
+  return createHash('sha256').update(contents).digest('hex');
+}
+
+function assertUnchangedSinceRead(path: string, kind: string): void {
+  const atRead = digestsAtRead.get(path);
+  if (atRead === undefined) {
+    return;
+  }
+  const now = existsSync(path) ? digestOf(readFileSync(path, 'utf8')) : undefined;
+  if (now !== atRead) {
+    throw new Error(
+      `${kind} at ${path} changed on disk while this command was running, so writing would discard that change. Re-run the command.`,
+    );
+  }
+}
+
 function readJson<T>(path: string, kind: string, validate: (data: unknown, path: string) => T): T {
   if (!existsSync(path)) {
     throw new Error(missingFileMessage(path, kind));
@@ -173,7 +197,9 @@ function readJson<T>(path: string, kind: string, validate: (data: unknown, path:
   } catch {
     throw new Error(`${kind} at ${path} is not valid JSON.`);
   }
-  return validate(parsed, path);
+  const validated = validate(parsed, path);
+  digestsAtRead.set(path, digestOf(raw));
+  return validated;
 }
 
 function serialize(data: unknown): string {
@@ -201,8 +227,14 @@ function stageJson(path: string, data: unknown): string {
   return tmpPath;
 }
 
-function writeJsonAtomic(path: string, data: unknown): void {
-  renameSync(stageJson(path, data), path);
+function writeJsonAtomic(path: string, kind: string, data: unknown): void {
+  assertUnchangedSinceRead(path, kind);
+  const contents = serialize(data);
+  const tmpPath = `${path}.${process.pid}.tmp`;
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileDurable(tmpPath, contents);
+  renameSync(tmpPath, path);
+  digestsAtRead.set(path, digestOf(contents));
 }
 
 // init used to write config, vault, and members one at a time. Failing after
@@ -237,7 +269,7 @@ export function readConfig(): ConfigFile {
 }
 
 export function writeConfig(config: ConfigFile): void {
-  writeJsonAtomic(configPath(), config);
+  writeJsonAtomic(configPath(), 'Fermer config', config);
 }
 
 export function readVault(): VaultFile {
@@ -245,7 +277,7 @@ export function readVault(): VaultFile {
 }
 
 export function writeVault(vault: VaultFile): void {
-  writeJsonAtomic(vaultPath(), vault);
+  writeJsonAtomic(vaultPath(), 'Fermer vault', vault);
 }
 
 export function readMembers(): MembersFile {
@@ -253,7 +285,7 @@ export function readMembers(): MembersFile {
 }
 
 export function writeMembers(members: MembersFile): void {
-  writeJsonAtomic(membersPath(), members);
+  writeJsonAtomic(membersPath(), 'Fermer members file', members);
 }
 
 // Key rotation rewrites both files at once. Writing them one after the other
@@ -262,6 +294,9 @@ export function writeMembers(members: MembersFile): void {
 // out. Both files are written to temp paths first so the visible switch is two
 // adjacent renames within the same directory.
 export function writeVaultAndMembers(vault: VaultFile, members: MembersFile): void {
+  assertUnchangedSinceRead(vaultPath(), 'Fermer vault');
+  assertUnchangedSinceRead(membersPath(), 'Fermer members file');
+
   const vaultTmp = stageJson(vaultPath(), vault);
   let membersTmp: string;
   try {
@@ -280,4 +315,7 @@ export function writeVaultAndMembers(vault: VaultFile, members: MembersFile): vo
   }
 
   renameSync(membersTmp, membersPath());
+
+  digestsAtRead.set(vaultPath(), digestOf(serialize(vault)));
+  digestsAtRead.set(membersPath(), digestOf(serialize(members)));
 }
