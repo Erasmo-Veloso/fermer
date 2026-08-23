@@ -1,8 +1,10 @@
 import { randomKey, encryptAesGcm, decryptAesGcm } from '../crypto/index.js';
 import { wrapProjectKey, unwrapProjectKey } from '../crypto/wrap.js';
+import { computeFingerprint } from '../crypto/device.js';
 import { fermerDir, writeConfig, readVault, writeVault, readMembers, writeMembers } from './format.js';
-import { existsSync } from 'node:fs';
-import type { Identity, VaultFile } from '../types.js';
+import { existsSync, readFileSync } from 'node:fs';
+import { basename, extname } from 'node:path';
+import type { Identity, VaultFile, MembersFile } from '../types.js';
 
 const DEFAULT_ENVIRONMENTS = ['development', 'staging', 'production'];
 
@@ -90,4 +92,83 @@ export function getSecrets(env: string, identity: Identity): Record<string, stri
     result[key] = plaintext.toString('utf8');
   }
   return result;
+}
+
+export function trustMember(
+  publicKeyPath: string,
+  identity: Identity,
+): { fingerprint: string; label: string } {
+  const projectKey = getProjectKey(identity);
+  const members = readMembers();
+
+  const publicKey = readFileSync(publicKeyPath, 'utf8');
+  const fingerprint = computeFingerprint(publicKey);
+
+  if (members.members[fingerprint]) {
+    throw new Error(`A member with fingerprint ${fingerprint} is already trusted.`);
+  }
+
+  const fileName = basename(publicKeyPath);
+  const label = fileName.slice(0, fileName.length - extname(fileName).length) || fileName;
+
+  const wrappedKey = wrapProjectKey(projectKey, publicKey);
+  members.members[fingerprint] = {
+    publicKey,
+    label,
+    wrappedKey,
+    addedAt: new Date().toISOString(),
+  };
+
+  writeMembers(members);
+  return { fingerprint, label };
+}
+
+export function revokeMember(fingerprint: string, identity: Identity): void {
+  const oldProjectKey = getProjectKey(identity);
+  const members = readMembers();
+
+  if (!members.members[fingerprint]) {
+    throw new Error(`No member with fingerprint ${fingerprint} is trusted on this project.`);
+  }
+
+  const remainingEntries = Object.entries(members.members).filter(([fp]) => fp !== fingerprint);
+  if (remainingEntries.length === 0) {
+    throw new Error('Cannot revoke the only remaining member of this project.');
+  }
+
+  const vault = readVault();
+  const newProjectKey = randomKey(32);
+
+  const newVault: VaultFile = { version: 1, environments: {} };
+  for (const [env, { secrets }] of Object.entries(vault.environments)) {
+    newVault.environments[env] = { secrets: {} };
+    for (const [key, encrypted] of Object.entries(secrets)) {
+      const plaintext = decryptAesGcm(encrypted.iv, encrypted.ciphertext, encrypted.tag, oldProjectKey);
+      const reEncrypted = encryptAesGcm(plaintext, newProjectKey);
+      newVault.environments[env].secrets[key] = { ...reEncrypted, updatedAt: new Date().toISOString() };
+    }
+  }
+
+  const newMembers: MembersFile = { version: 1, members: {} };
+  for (const [fp, entry] of remainingEntries) {
+    newMembers.members[fp] = {
+      ...entry,
+      wrappedKey: wrapProjectKey(newProjectKey, entry.publicKey),
+    };
+  }
+
+  writeVault(newVault);
+  writeMembers(newMembers);
+}
+
+export function listMembers(
+  identity: Identity,
+): Array<{ fingerprint: string; label: string; addedAt: string }> {
+  getProjectKey(identity); // ensure this identity is authorized before revealing membership
+  const members = readMembers();
+  return Object.entries(members.members).map(([fingerprint, entry]) => ({
+    fingerprint,
+    label: entry.label,
+    addedAt: entry.addedAt,
+  }));
 }
