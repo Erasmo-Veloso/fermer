@@ -375,12 +375,28 @@ When `fermer init` runs, also create a `.gitattributes` entry:
 
 This prevents Git from trying to merge encrypted content. Print a note about this.
 
-### T21 — Validate vault integrity on load
+### T21 — Validate vault integrity on load and harden writes
 
 In `src/vault/format.ts`, add validation when reading files:
 - Check `version` field matches expected version
 - Check required fields exist
 - Throw descriptive errors for malformed files
+
+Two issues found during the Phase 1–2 review also belong here:
+
+**Durability of atomic writes.** `writeJsonAtomic` writes to a temp file
+then renames. That makes a torn write invisible to readers, but POSIX
+does not guarantee the data reaches disk before the rename, so a power
+loss can leave a renamed-but-empty file. Open the temp file with
+`openSync`, `writeSync` the contents, `fsyncSync` the descriptor, then
+`closeSync` and rename. The vault is also in Git history, so this is
+hardening rather than a data-loss fix.
+
+**Misleading not-found message.** `readJson` always suggests running
+`fermer init`, but if `.fermer/` already exists and only one file is
+missing, `init` refuses to run. Distinguish the two cases: if `.fermer/`
+is absent, suggest `fermer init`; if it exists but a file is missing,
+say the vault is incomplete and name the missing file.
 
 ### T22 — Add `--json` output flag
 
