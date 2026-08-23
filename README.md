@@ -19,8 +19,8 @@ Fermer stores secrets **encrypted inside your Git repository**. Each developer h
 ## Quick Start
 
 ```bash
-# Install
-npm install -g fermer
+# Install (the package is fermer-cli; the command it installs is fermer)
+npm install -g fermer-cli
 
 # Create your identity (once per machine)
 fermer identity
