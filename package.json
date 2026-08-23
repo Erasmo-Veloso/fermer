@@ -11,8 +11,18 @@
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run lint && npm test"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Erasmo-Veloso/fermer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Erasmo-Veloso/fermer/issues"
+  },
+  "homepage": "https://github.com/Erasmo-Veloso/fermer#readme",
   "engines": {
     "node": ">=20.0.0"
   },
