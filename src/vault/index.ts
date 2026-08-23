@@ -9,6 +9,7 @@ import {
   readMembers,
   writeMembers,
   writeVaultAndMembers,
+  ensureGitAttributes,
 } from './format.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
@@ -41,7 +42,7 @@ function getProjectKey(identity: Identity): Buffer {
   return unwrapProjectKey(member.wrappedKey, identity.privateKey);
 }
 
-export function initVault(identity: Identity): void {
+export function initVault(identity: Identity): 'created' | 'updated' | 'unchanged' {
   if (existsSync(fermerDir())) {
     throw new Error(`Fermer is already initialized at ${fermerDir()}.`);
   }
@@ -69,6 +70,8 @@ export function initVault(identity: Identity): void {
       },
     },
   });
+
+  return ensureGitAttributes();
 }
 
 export function setSecret(key: string, value: string, env: string, identity: Identity): void {

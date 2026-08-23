@@ -32,6 +32,30 @@ function membersPath(): string {
   return join(fermerDir(), 'members.json');
 }
 
+const GIT_ATTRIBUTES_RULES = [
+  '.fermer/vault.json merge=binary',
+  '.fermer/members.json merge=binary',
+];
+
+// Git's line-based merge driver cannot usefully merge encrypted JSON: a
+// three-way merge of two ciphertexts produces bytes that decrypt to nothing.
+// Marking the files binary makes Git report a conflict for a human to resolve
+// with "fermer set" instead of silently writing a corrupt vault.
+export function ensureGitAttributes(): 'created' | 'updated' | 'unchanged' {
+  const path = join(findRepoRoot(), '.gitattributes');
+  const existing = existsSync(path) ? readFileSync(path, 'utf8') : undefined;
+  const lines = existing === undefined ? [] : existing.split(/\r?\n/);
+  const missing = GIT_ATTRIBUTES_RULES.filter((rule) => !lines.includes(rule));
+
+  if (missing.length === 0) {
+    return 'unchanged';
+  }
+
+  const separator = existing === undefined || existing.length === 0 || existing.endsWith('\n') ? '' : '\n';
+  writeFileSync(path, `${existing ?? ''}${separator}${missing.join('\n')}\n`, 'utf8');
+  return existing === undefined ? 'created' : 'updated';
+}
+
 function readJson<T>(path: string, kind: string): T {
   if (!existsSync(path)) {
     throw new Error(`${kind} not found at ${path}. Run "fermer init" first.`);

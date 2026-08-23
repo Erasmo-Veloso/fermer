@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createIdentity } from '../src/identity/index';
@@ -38,6 +38,39 @@ describe('vault: init and secret CRUD', () => {
     expect(existsSync(join(fermerDir(), 'config.json'))).toBe(true);
     expect(existsSync(join(fermerDir(), 'vault.json'))).toBe(true);
     expect(existsSync(join(fermerDir(), 'members.json'))).toBe(true);
+  });
+
+  it('init marks the vault files binary in .gitattributes', () => {
+    const identity = createIdentity('alice@workstation');
+    const result = initVault(identity);
+
+    expect(result).toBe('created');
+    const attributes = readFileSync(join(repoRoot, '.gitattributes'), 'utf8');
+    expect(attributes).toContain('.fermer/vault.json merge=binary');
+    expect(attributes).toContain('.fermer/members.json merge=binary');
+  });
+
+  it('appends to an existing .gitattributes without clobbering it', () => {
+    writeFileSync(join(repoRoot, '.gitattributes'), '*.png binary\n', 'utf8');
+    const identity = createIdentity('alice@workstation');
+
+    const result = initVault(identity);
+
+    expect(result).toBe('updated');
+    const attributes = readFileSync(join(repoRoot, '.gitattributes'), 'utf8');
+    expect(attributes).toContain('*.png binary');
+    expect(attributes).toContain('.fermer/vault.json merge=binary');
+  });
+
+  it('adds a separating newline when the existing file lacks one', () => {
+    writeFileSync(join(repoRoot, '.gitattributes'), '*.png binary', 'utf8');
+    const identity = createIdentity('alice@workstation');
+
+    initVault(identity);
+
+    const lines = readFileSync(join(repoRoot, '.gitattributes'), 'utf8').split('\n');
+    expect(lines).toContain('*.png binary');
+    expect(lines).toContain('.fermer/vault.json merge=binary');
   });
 
   it('refuses to init twice', () => {
