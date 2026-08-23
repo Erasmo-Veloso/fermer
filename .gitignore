@@ -6,4 +6,4 @@ build/
 .DS_Store
 Thumbs.db
 .vscode/
-packages/*/node_modules/
+*.tsbuildinfo

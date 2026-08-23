@@ -1,35 +1,37 @@
 {
   "name": "fermer",
-  "version": "0.0.0",
-  "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "version": "0.1.0",
+  "description": "Git-native encrypted secrets manager. No server, no SaaS — secrets live in your repo, encrypted end-to-end.",
+  "type": "module",
+  "bin": {
+    "fermer": "./dist/cli.js"
+  },
   "scripts": {
-    "build": "echo \"build placeholder\"",
-    "lint": "echo \"lint placeholder\"",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:ci": "vitest run"
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist/"
+  ],
+  "keywords": [
+    "secrets",
+    "env",
+    "encryption",
+    "dotenv",
+    "security",
+    "git"
+  ],
+  "license": "MIT",
   "devDependencies": {
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "25.9.1",
-    "@types/pg": "^8.20.0",
-    "drizzle-kit": "^0.31.10",
-    "ts-node": "10.9.2",
-    "tsx": "^4.22.3",
-    "typescript": "6.0.3",
-    "vitest": "4.1.7"
-  },
-  "dependencies": {
-    "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.45.2",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "pg": "^8.21.0",
-    "zod": "^4.4.3"
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0",
+    "tsx": "^4.19.0"
   }
 }
