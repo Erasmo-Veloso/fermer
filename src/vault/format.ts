@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync, rmSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import type { ConfigFile, VaultFile, MembersFile } from '../types.js';
 
@@ -49,11 +49,15 @@ function readJson<T>(path: string, kind: string): T {
   }
 }
 
-function writeJsonAtomic(path: string, data: unknown): void {
+function stageJson(path: string, data: unknown): string {
   mkdirSync(dirname(path), { recursive: true });
   const tmpPath = `${path}.${process.pid}.tmp`;
   writeFileSync(tmpPath, JSON.stringify(data, null, 2) + '\n', 'utf8');
-  renameSync(tmpPath, path);
+  return tmpPath;
+}
+
+function writeJsonAtomic(path: string, data: unknown): void {
+  renameSync(stageJson(path, data), path);
 }
 
 export function readConfig(): ConfigFile {
@@ -78,4 +82,30 @@ export function readMembers(): MembersFile {
 
 export function writeMembers(members: MembersFile): void {
   writeJsonAtomic(membersPath(), members);
+}
+
+// Key rotation rewrites both files at once. Writing them one after the other
+// leaves a window where the vault is encrypted with a new project key while
+// members.json still holds everyone's old wrapped key, which locks every member
+// out. Both files are written to temp paths first so the visible switch is two
+// adjacent renames within the same directory.
+export function writeVaultAndMembers(vault: VaultFile, members: MembersFile): void {
+  const vaultTmp = stageJson(vaultPath(), vault);
+  let membersTmp: string;
+  try {
+    membersTmp = stageJson(membersPath(), members);
+  } catch (err) {
+    rmSync(vaultTmp, { force: true });
+    throw err;
+  }
+
+  try {
+    renameSync(vaultTmp, vaultPath());
+  } catch (err) {
+    rmSync(vaultTmp, { force: true });
+    rmSync(membersTmp, { force: true });
+    throw err;
+  }
+
+  renameSync(membersTmp, membersPath());
 }

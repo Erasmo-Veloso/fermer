@@ -1,7 +1,15 @@
 import { randomKey, encryptAesGcm, decryptAesGcm } from '../crypto/index.js';
 import { wrapProjectKey, unwrapProjectKey } from '../crypto/wrap.js';
-import { computeFingerprint } from '../crypto/device.js';
-import { fermerDir, writeConfig, readVault, writeVault, readMembers, writeMembers } from './format.js';
+import { computeFingerprint, canonicalizePublicKey } from '../crypto/device.js';
+import {
+  fermerDir,
+  writeConfig,
+  readVault,
+  writeVault,
+  readMembers,
+  writeMembers,
+  writeVaultAndMembers,
+} from './format.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
 import type { Identity, VaultFile, MembersFile } from '../types.js';
@@ -101,7 +109,7 @@ export function trustMember(
   const projectKey = getProjectKey(identity);
   const members = readMembers();
 
-  const publicKey = readFileSync(publicKeyPath, 'utf8');
+  const publicKey = canonicalizePublicKey(readFileSync(publicKeyPath, 'utf8'));
   const fingerprint = computeFingerprint(publicKey);
 
   if (members.members[fingerprint]) {
@@ -145,7 +153,9 @@ export function revokeMember(fingerprint: string, identity: Identity): void {
     for (const [key, encrypted] of Object.entries(secrets)) {
       const plaintext = decryptAesGcm(encrypted.iv, encrypted.ciphertext, encrypted.tag, oldProjectKey);
       const reEncrypted = encryptAesGcm(plaintext, newProjectKey);
-      newVault.environments[env].secrets[key] = { ...reEncrypted, updatedAt: new Date().toISOString() };
+      // Rotation re-encrypts without changing any value, so the original
+      // last-modified timestamp is carried over.
+      newVault.environments[env].secrets[key] = { ...reEncrypted, updatedAt: encrypted.updatedAt };
     }
   }
 
@@ -157,8 +167,7 @@ export function revokeMember(fingerprint: string, identity: Identity): void {
     };
   }
 
-  writeVault(newVault);
-  writeMembers(newMembers);
+  writeVaultAndMembers(newVault, newMembers);
 }
 
 export function listMembers(
