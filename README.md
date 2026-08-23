@@ -34,12 +34,15 @@ fermer set DATABASE_URL=postgres://localhost/mydb
 # Run your app with secrets injected
 fermer run npm start
 
-# Add a team member
+# Add a team member: they export their public key, you trust it
 fermer trust alice-key.pub
 
 # List who has access
 fermer members
 ```
+
+Committing `.fermer/` is the point — it holds only ciphertext. Your private
+key lives in `~/.fermer/identity.json` and never leaves your machine.
 
 ## How It Works
 
@@ -63,7 +66,8 @@ fermer members
 
 | Command | Description |
 |---------|-------------|
-| `fermer identity` | Create or display your cryptographic identity |
+| `fermer identity [label]` | Create or display your cryptographic identity |
+| `fermer identity --export <path>` | Write your public key to a file to share |
 | `fermer init` | Initialize Fermer in the current repository |
 | `fermer set KEY=VALUE` | Add or update a secret |
 | `fermer unset KEY` | Remove a secret |
@@ -74,9 +78,23 @@ fermer members
 | `fermer revoke <fingerprint>` | Revoke a developer and rotate keys |
 | `fermer members` | List authorized developers |
 
+Secret names must look like environment variables: letters, digits, and
+underscores, not starting with a digit.
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `-e`, `--env <name>` | Target environment (default: `development`) |
+| `--new-env` | With `set`, also add the environment to the project |
+| `--json` | Machine-readable output for `list`, `members`, and `export` |
+
+For `run`, put `-e` before the command being run, otherwise it is passed
+through to that command: `fermer run -e production npm start`.
+
 ## Environments
 
-Fermer supports multiple environments (development, staging, production):
+A new project starts with `development`, `staging`, and `production`:
 
 ```bash
 fermer set DATABASE_URL=postgres://prod-host/db -e production
@@ -84,7 +102,13 @@ fermer run -e production npm start
 fermer list -e staging
 ```
 
-The default environment is `development`.
+An unknown environment is refused rather than created, so a typo in `-e`
+cannot silently write a secret somewhere nothing will read it. Add a new
+environment explicitly:
+
+```bash
+fermer set PREVIEW_URL=https://preview.example -e preview --new-env
+```
 
 ## Requirements
 

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Both platforms are tested because process spawning differs between
+        # them in ways that have already caused real defects: Windows resolves
+        # commands through .cmd shims, and only Windows routes anything through
+        # cmd.exe. A Linux-only matrix would not have caught that.
+        os: [ubuntu-latest, windows-latest]
+        node: ['20', '22']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      # The smoke suite builds and drives dist/cli.js itself, so this covers
+      # both the unit tests and the shipped artifact.
+      - name: Test
+        run: npm test
