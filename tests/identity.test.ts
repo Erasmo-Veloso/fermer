@@ -39,6 +39,12 @@ describe('identity: creation and loading', () => {
     expect(identityPath()).toBe(join(tempHome, 'identity.json'));
   });
 
+  it('treats an empty FERMER_HOME as unset rather than a relative path', () => {
+    process.env.FERMER_HOME = '';
+    expect(identityDir()).not.toBe('');
+    expect(identityPath()).toContain('.fermer');
+  });
+
   it('creates an identity and writes it to disk as valid JSON', () => {
     const identity = createIdentity('alice@workstation');
 

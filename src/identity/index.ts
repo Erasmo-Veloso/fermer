@@ -5,7 +5,8 @@ import { generateDeviceKeypair } from '../crypto/device.js';
 import type { Identity } from '../types.js';
 
 export function identityDir(): string {
-  return process.env.FERMER_HOME ?? join(homedir(), '.fermer');
+  const override = process.env.FERMER_HOME;
+  return override && override.length > 0 ? override : join(homedir(), '.fermer');
 }
 
 export function identityPath(): string {
@@ -47,7 +48,7 @@ export function createIdentity(label: string): Identity {
     createdAt: new Date().toISOString(),
     label,
   };
-  mkdirSync(identityDir(), { recursive: true });
+  mkdirSync(identityDir(), { recursive: true, mode: 0o700 });
   writeFileSync(identityPath(), JSON.stringify(identity, null, 2) + '\n', {
     encoding: 'utf8',
     mode: 0o600,
