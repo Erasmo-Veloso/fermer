@@ -12,13 +12,15 @@ fermer/
     cli.ts                 # Entry point: help/version, dynamic dispatch to commands/
     cli-args.ts            # Pure argument parsing (COMMANDS, extractEnv, readVersion)
     types.ts               # Shared TypeScript types
+    env-file.ts            # .env parser used by `fermer import`
     crypto/
-      index.ts             # AES-256-GCM encrypt/decrypt, ECDH key derivation
-      device.ts            # Identity keypair generation, fingerprint, signing
+      index.ts             # AES-256-GCM encrypt/decrypt, ECDH, HKDF
+      device.ts            # Identity keypairs, fingerprints, public key validation, signing
       wrap.ts              # Project key wrapping/unwrapping via ECDH
     vault/
-      index.ts             # Vault CRUD: load, save, set, unset, list secrets
-      format.ts            # Vault file format (read/write .fermer/vault.json)
+      index.ts             # Vault operations: secrets, environments, members
+      format.ts            # .fermer/ file I/O, validation, atomic writes
+      attest.ts            # Member attestation signing and chain verification
     identity/
       index.ts             # Identity creation, loading, export
     commands/
@@ -29,20 +31,25 @@ fermer/
       list.ts              # `fermer list`
       run.ts               # `fermer run <cmd>`
       export.ts            # `fermer export`
+      import.ts            # `fermer import [file]`
       trust.ts             # `fermer trust <key.pub>`
       revoke.ts            # `fermer revoke <fingerprint>`
       members.ts           # `fermer members`
+      env.ts               # `fermer env [name]`
+      migrate.ts           # `fermer migrate`
   tests/
-    crypto.test.ts
-    vault.test.ts
+    crypto.test.ts         # AES-GCM, HKDF
+    wrap.test.ts           # project key wrapping, tamper detection
+    attest.test.ts         # member chain of trust, the self-added member attack
     identity.test.ts
-    wrap.test.ts
-    commands/
-      init.test.ts
-      set.test.ts
-      run.test.ts
-      trust.test.ts
-      revoke.test.ts
+    vault.test.ts
+    trust.test.ts
+    format.test.ts         # validation, concurrent writes, missing files
+    env-file.test.ts       # .env parsing edge cases
+    cli.test.ts            # argument parsing
+    smoke.test.ts          # the built dist/cli.js as a subprocess
+    commands/              # per-command behaviour
+    e2e/onboarding.test.ts # full lifecycle through the command layer
 ```
 
 ## File Formats
@@ -90,7 +97,7 @@ Committed to Git. Maps developer fingerprints to their public keys and wrapped p
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "members": {
     "a1b2c3d4...": {
       "publicKey": "-----BEGIN PUBLIC KEY-----\n...",
@@ -101,11 +108,53 @@ Committed to Git. Maps developer fingerprints to their public keys and wrapped p
         "ciphertext": "base64...",
         "tag": "base64..."
       },
-      "addedAt": "2026-08-23T10:00:00Z"
+      "addedAt": "2026-08-23T10:00:00Z",
+      "addedBy": "a1b2c3d4...",
+      "signature": "base64..."
     }
   }
 }
 ```
+
+Version 1 of this file had no `addedBy` or `signature`. It is refused on read,
+with a pointer to `fermer migrate`.
+
+### Member Attestation
+
+This file is the project's access list, and it lives in a repository that
+anyone with push access can edit. Encryption alone does not protect it: an
+attacker cannot forge a `wrappedKey` without the project key, but
+`revokeMember` re-wraps the new project key for every remaining member using
+the `publicKey` recorded here. A hand-inserted entry therefore used to receive
+real access the next time any member revoked anyone — the legitimate member
+performing the revocation did the work unknowingly.
+
+Each entry now carries `addedBy` and an ECDSA signature by that member over a
+canonical payload of the fingerprint, canonicalized public key, label, and
+`addedAt`. Verification, in `src/vault/attest.ts`, requires:
+
+1. **Exactly one self-attested entry**, the founder created by `init`.
+2. Every other entry transitively attested by an already-admitted member.
+
+The single-root rule is the crux, and it is easy to get wrong. Accepting *any*
+self-attested entry as a root would defeat the whole mechanism, because an
+attacker holds their own private key and can sign their own entry perfectly
+well. What they cannot do is avoid producing a *second* founder, which is
+exactly what the check rejects.
+
+The signature deliberately excludes `wrappedKey`, so key rotation can replace
+every wrapping without invalidating any grant.
+
+Consequences worth knowing before changing this code:
+
+- Revoking a member orphans anyone they attested, so `revokeMember` re-attests
+  those entries under the revoker.
+- Revoking the founder leaves no root, so the revoker becomes the new one.
+- A founder cannot revoke themselves: the others would have no root, and
+  self-attesting on their behalf needs their private keys.
+- `fermer migrate` requires the caller to decrypt an existing secret. Unwrapping
+  their own `wrappedKey` is not proof of anything, because an attacker can wrap
+  a key of their own choosing for their own public key and it unwraps cleanly.
 
 ### Config File (`.fermer/config.json`)
 

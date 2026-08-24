@@ -477,6 +477,69 @@ Create `.github/workflows/ci.yml`:
 
 ---
 
+## Phase 9: Member Attestation (done)
+
+### T28 — Sign member entries so the access list cannot be edited by hand
+
+Found by asking what happens if someone clones the repository and adds
+themselves to `members.json`. The insertion alone grants nothing, but
+`revokeMember` re-wraps the new project key for every remaining member from
+the `publicKey` in the file, so the next unrelated revocation handed the
+forged entry full access.
+
+Implemented in `src/vault/attest.ts`; see the **Member Attestation** section of
+`docs/architecture.md` for the invariants, which are easy to break by accident.
+The essential one: exactly one self-attested founder. Treating any self-attested
+entry as a root defeats the mechanism, since an attacker can sign their own.
+
+### T29 — `fermer migrate` for the pre-attestation format
+
+Version 1 member files are refused on read. Migration requires the caller to
+decrypt an existing secret, because unwrapping their own entry proves nothing —
+an attacker can wrap a key of their own choosing for their own public key.
+Migration vouches for whatever the unsigned file listed, so the command prints
+the list and tells the user to revoke anything unexpected. That human review is
+load-bearing and cannot be replaced: the old format has no signatures to check.
+
+**Residual limitation:** on a project whose vault has no secrets yet, there is
+nothing to decrypt, so membership cannot be verified cryptographically.
+
+---
+
+## Phase 10: Adoption and Ergonomics (done)
+
+### T30 — `fermer import` for existing `.env` files
+
+Re-entering variables one at a time was enough friction to keep people on
+`.env`. Parser in `src/env-file.ts`, command in `src/commands/import.ts`.
+
+Two rules matter more than the rest, because breaking either corrupts a secret
+in a way that only surfaces at runtime:
+
+- Existing secrets are skipped, never replaced, unless `--overwrite` is given.
+- An unquoted value is taken verbatim, including a trailing `# ...`. Do not add
+  comment stripping: it would truncate a password containing `#`. The affected
+  keys are reported instead.
+
+Anything ambiguous aborts the whole import with every reason listed at once, so
+nothing lands half-applied. `setSecrets` writes the batch in one atomic update.
+
+### T31 — `fermer env` and a default environment that actually works
+
+`config.json` carried `defaultEnvironment` from the start, but nothing read it —
+the CLI had `development` hardcoded, so editing the field did nothing. `fermer
+env` now lists environments and `fermer env <name>` changes the default.
+`extractEnv` returns `undefined` when no `-e` is given so the dispatcher can
+resolve the project default; it cannot resolve it itself, having no repository
+context and also running for `fermer --help` outside one.
+
+### T32 — Exit quietly when stdout closes early
+
+`fermer export | head` crashed with an unhandled EPIPE and a stack trace over
+the output being read. Unix tools exit quietly instead.
+
+---
+
 ## Commit Convention
 
 Use conventional commits. One commit per task. Format:
