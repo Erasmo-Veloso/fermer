@@ -10,6 +10,7 @@ export const COMMANDS = new Set([
   'list',
   'run',
   'export',
+  'import',
   'trust',
   'revoke',
   'members',

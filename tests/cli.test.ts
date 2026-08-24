@@ -46,7 +46,20 @@ describe('cli: extractEnv', () => {
 describe('cli: command table and version', () => {
   it('lists exactly the documented commands', () => {
     expect([...COMMANDS].sort()).toEqual(
-      ['export', 'identity', 'init', 'list', 'members', 'migrate', 'revoke', 'run', 'set', 'trust', 'unset'].sort(),
+      [
+        'export',
+        'identity',
+        'import',
+        'init',
+        'list',
+        'members',
+        'migrate',
+        'revoke',
+        'run',
+        'set',
+        'trust',
+        'unset',
+      ].sort(),
     );
   });
 

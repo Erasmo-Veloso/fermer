@@ -74,6 +74,7 @@ key lives in `~/.fermer/identity.json` and never leaves your machine.
 | `fermer list` | List secret keys (values hidden) |
 | `fermer run <cmd>` | Run a command with secrets injected |
 | `fermer export` | Output decrypted secrets as KEY=VALUE |
+| `fermer import [file]` | Bulk-import an existing `.env` (default: `.env`) |
 | `fermer trust <key.pub>` | Authorize a developer |
 | `fermer revoke <fingerprint>` | Revoke a developer and rotate keys |
 | `fermer members` | List authorized developers |
@@ -88,6 +89,8 @@ underscores, not starting with a digit.
 | `-e`, `--env <name>` | Target environment (default: `development`) |
 | `--new-env` | With `set`, also add the environment to the project |
 | `--json` | Machine-readable output for `list`, `members`, and `export` |
+| `--dry-run` | With `import`, report what would happen and write nothing |
+| `--overwrite` | With `import`, replace secrets that already exist |
 
 For `run`, put `-e` before the command being run, otherwise it is passed
 through to that command: `fermer run -e production npm start`.
@@ -109,6 +112,43 @@ environment explicitly:
 ```bash
 fermer set PREVIEW_URL=https://preview.example -e preview --new-env
 ```
+
+## Moving an Existing Project Off `.env`
+
+You do not have to re-enter variables one at a time. `fermer import` reads a
+`.env` you already have:
+
+```bash
+fermer import                       # reads .env into development
+fermer import .env.production -e production
+fermer import --dry-run             # show what would happen, write nothing
+```
+
+**Existing secrets are never touched.** A key already in the target environment
+is reported as skipped, so importing cannot quietly replace a value you set
+deliberately. Pass `--overwrite` when replacing them is what you want.
+
+**Anything ambiguous aborts the whole import** and every reason is listed at
+once, so nothing is half-applied and you can fix the file in one pass. That
+covers duplicate keys, lines that are not `KEY=VALUE`, unclosed quotes, and
+names fermer cannot store as environment variables.
+
+Two parsing details are worth knowing, because guessing either one wrong
+corrupts a secret in a way that only shows up at runtime:
+
+- A **quoted** value is unwrapped. Double quotes expand `\n`, `\r`, `\t`, `\"`,
+  and `\\`, and may span several lines — which is how a PEM key in a `.env`
+  survives the trip intact. Single quotes are taken literally.
+- An **unquoted** value is taken verbatim, including any trailing `# ...`.
+  Fermer does not try to decide whether that was a comment, because stripping
+  it would truncate a password that legitimately contains `#`. Such values are
+  listed after the import so you can quote them in the file and re-import if
+  the guess went the wrong way.
+
+Values are never printed, so the report names keys only.
+
+Once `fermer run` works, delete the `.env` — and make sure it was in
+`.gitignore` before you ever committed. `fermer import` warns you if it is not.
 
 ## Working with a Team
 

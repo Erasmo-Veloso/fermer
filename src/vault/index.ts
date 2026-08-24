@@ -145,6 +145,35 @@ export function setSecret(key: string, value: string, env: string, identity: Ide
   writeVault(vault);
 }
 
+export function isValidSecretName(key: string): boolean {
+  return VALID_SECRET_KEY.test(key);
+}
+
+// Importing a .env one setSecret at a time would rewrite the vault once per
+// variable, so a failure halfway leaves a partial import, and the
+// changed-on-disk guard would trip on the second write. Every value is
+// validated first, then written in a single atomic update.
+export function setSecrets(values: Record<string, string>, env: string, identity: Identity): void {
+  assertKnownEnvironment(env);
+  for (const key of Object.keys(values)) {
+    assertValidKey(key);
+  }
+
+  const projectKey = getProjectKey(identity);
+  const vault = readVault();
+  if (!vault.environments[env]) {
+    vault.environments[env] = { secrets: {} };
+  }
+
+  const updatedAt = new Date().toISOString();
+  for (const [key, value] of Object.entries(values)) {
+    const { iv, ciphertext, tag } = encryptAesGcm(Buffer.from(value, 'utf8'), projectKey);
+    vault.environments[env].secrets[key] = { iv, ciphertext, tag, updatedAt };
+  }
+
+  writeVault(vault);
+}
+
 export function unsetSecret(key: string, env: string, identity: Identity): void {
   assertKnownEnvironment(env);
   getProjectKey(identity); // ensure this identity is authorized before mutating the vault
