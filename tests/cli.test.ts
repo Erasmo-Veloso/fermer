@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { extractEnv, COMMANDS, readVersion } from '../src/cli-args';
 
 describe('cli: extractEnv', () => {
-  it('defaults to development when no env flag is given', () => {
+  it('leaves env undefined when no flag is given, so the project default wins', () => {
     const { env, rest } = extractEnv(['KEY=VALUE'], { leadingOnly: false });
-    expect(env).toBe('development');
+    expect(env).toBeUndefined();
     expect(rest).toEqual(['KEY=VALUE']);
   });
 
@@ -32,13 +32,13 @@ describe('cli: extractEnv', () => {
 
   it('run: does not swallow the child command\'s own -e flag', () => {
     const { env, rest } = extractEnv(['node', '-e', "console.log('hi')"], { leadingOnly: true });
-    expect(env).toBe('development');
+    expect(env).toBeUndefined();
     expect(rest).toEqual(['node', '-e', "console.log('hi')"]);
   });
 
   it('run: does not swallow -e appearing after the child command name', () => {
     const { env, rest } = extractEnv(['npm', 'start', '-e', 'weird'], { leadingOnly: true });
-    expect(env).toBe('development');
+    expect(env).toBeUndefined();
     expect(rest).toEqual(['npm', 'start', '-e', 'weird']);
   });
 });
@@ -52,6 +52,7 @@ describe('cli: command table and version', () => {
         'import',
         'init',
         'list',
+        'env',
         'members',
         'migrate',
         'revoke',

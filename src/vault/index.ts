@@ -69,6 +69,25 @@ export function listEnvironments(): string[] {
   return readConfig().environments;
 }
 
+export function getDefaultEnvironment(): string {
+  return readConfig().defaultEnvironment;
+}
+
+export function setDefaultEnvironment(name: string, identity: Identity): boolean {
+  getProjectKey(identity);
+  const config = readConfig();
+  if (!config.environments.includes(name)) {
+    throw new Error(
+      `Unknown environment "${name}". Known: ${config.environments.join(', ')}. Add it with "fermer set KEY=VALUE -e ${name} --new-env".`,
+    );
+  }
+  if (config.defaultEnvironment === name) {
+    return false;
+  }
+  writeConfig({ ...config, defaultEnvironment: name });
+  return true;
+}
+
 // Unwrapping a wrapped key only proves it was wrapped for this identity's public
 // key, which anyone can do for themselves with a key of their own choosing.
 // Decrypting a stored secret is what proves the unwrapped key is the project's,

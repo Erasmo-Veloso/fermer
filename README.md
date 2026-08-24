@@ -78,6 +78,7 @@ key lives in `~/.fermer/identity.json` and never leaves your machine.
 | `fermer trust <key.pub>` | Authorize a developer |
 | `fermer revoke <fingerprint>` | Revoke a developer and rotate keys |
 | `fermer members` | List authorized developers |
+| `fermer env [name]` | Show environments, or make one the default |
 
 Secret names must look like environment variables: letters, digits, and
 underscores, not starting with a digit.
@@ -86,9 +87,9 @@ underscores, not starting with a digit.
 
 | Flag | Description |
 |------|-------------|
-| `-e`, `--env <name>` | Target environment (default: `development`) |
+| `-e`, `--env <name>` | Target environment for one command (default: the project's) |
 | `--new-env` | With `set`, also add the environment to the project |
-| `--json` | Machine-readable output for `list`, `members`, and `export` |
+| `--json` | Machine-readable output for `list`, `members`, `export`, and `env` |
 | `--dry-run` | With `import`, report what would happen and write nothing |
 | `--overwrite` | With `import`, replace secrets that already exist |
 
@@ -97,21 +98,76 @@ through to that command: `fermer run -e production npm start`.
 
 ## Environments
 
-A new project starts with `development`, `staging`, and `production`:
+A new project starts with `development`, `staging`, and `production`.
+`development` is the default, so a command with no `-e` targets it.
+
+### Seeing what exists
+
+```bash
+fermer env
+```
+
+```
+development  (default, in use)
+staging
+production
+```
+
+### Switching for one command
+
+Pass `-e`. Nothing is remembered; the next command goes back to the default.
 
 ```bash
 fermer set DATABASE_URL=postgres://prod-host/db -e production
-fermer run -e production npm start
 fermer list -e staging
+fermer run -e production npm start
 ```
 
+For `run`, `-e` must come **before** the command being run, otherwise it is
+passed through to that command instead — `node -e` is Node's own eval flag.
+
+### Switching the default
+
+```bash
+fermer env production
+```
+
+Every later command with no `-e` then targets `production`. The default lives
+in `.fermer/config.json`, so committing that file changes it for the whole
+team; keep it local by not committing that one change.
+
+### Adding an environment
+
 An unknown environment is refused rather than created, so a typo in `-e`
-cannot silently write a secret somewhere nothing will read it. Add a new
-environment explicitly:
+cannot silently write a secret somewhere nothing will read it:
+
+```
+$ fermer set KEY=value -e prodution
+Error: Unknown environment "prodution". Known: development, staging, production.
+```
+
+Adding one is deliberate:
 
 ```bash
 fermer set PREVIEW_URL=https://preview.example -e preview --new-env
 ```
+
+## Scripting
+
+`list`, `members`, `export`, and `env` accept `--json` for machine-readable
+output. Everything writes to stdout and pipes normally, so the usual tools
+work and closing the pipe early is not an error:
+
+```bash
+fermer export > .env.local
+fermer export --json | jq -r '.DATABASE_URL'
+fermer list | head -5
+fermer env --json | jq -r '.default'
+```
+
+Secret values reach stdout only through `export` and the environment of the
+process `run` spawns. No other command prints a value, so a report or a log is
+safe to paste.
 
 ## Moving an Existing Project Off `.env`
 

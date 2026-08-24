@@ -14,6 +14,7 @@ export const COMMANDS = new Set([
   'trust',
   'revoke',
   'members',
+  'env',
   'migrate',
 ]);
 
@@ -31,9 +32,16 @@ export function readVersion(): string {
 // everything from there is passed through untouched. Every other command's
 // positional arguments never look like -e/--env, so scanning the full array
 // is safe and more forgiving of flag placement.
-export function extractEnv(args: string[], opts: { leadingOnly: boolean }): { env: string; rest: string[] } {
+// Returns env as undefined when no flag was given, so the caller can fall back
+// to the project's configured default. Resolving it here is not possible: this
+// function has no repository context, and it also runs for "fermer --help"
+// outside any repository.
+export function extractEnv(
+  args: string[],
+  opts: { leadingOnly: boolean },
+): { env: string | undefined; rest: string[] } {
   const rest: string[] = [];
-  let env = 'development';
+  let env: string | undefined;
   let stillLeading = true;
 
   for (let i = 0; i < args.length; i++) {

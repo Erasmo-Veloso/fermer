@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { COMMANDS, readVersion, extractEnv } from './cli-args.js';
+import { getDefaultEnvironment } from './vault/index.js';
 
 const HELP_TEXT = `Usage: fermer <command> [options]
 
@@ -15,10 +16,11 @@ Commands:
   trust <key.pub>       Authorize a developer
   revoke <fingerprint>  Revoke a developer and rotate keys
   members               List authorized developers
+  env [name]            Show environments, or make one the default
   migrate               Upgrade an older .fermer/ member list
 
 Options:
-  -e, --env <name>      Target environment (default: development)
+  -e, --env <name>      Target environment (default: the project's, see "fermer env")
   --json                Machine-readable output (list, members, export)
   --dry-run             With import, report what would happen and write nothing
   --overwrite           With import, replace secrets that already exist
@@ -28,6 +30,18 @@ Options:
 For "run", put -e/--env before the command being run so it is not mistaken
 for a flag of that command, e.g. "fermer run -e production npm start".
 `;
+
+// The project records its own default in .fermer/config.json, which "fermer env
+// <name>" changes. Commands that need no repository at all -- identity, help --
+// must still work outside one, so an unreadable config falls back rather than
+// failing here; the command itself reports the real problem if it needs a vault.
+function resolveDefaultEnvironment(): string {
+  try {
+    return getDefaultEnvironment();
+  } catch {
+    return 'development';
+  }
+}
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -47,7 +61,8 @@ async function main(): Promise<void> {
     throw new Error(`Unknown command "${command}". Run "fermer --help" for usage.`);
   }
 
-  const { env, rest } = extractEnv(argv.slice(1), { leadingOnly: command === 'run' });
+  const { env: explicitEnv, rest } = extractEnv(argv.slice(1), { leadingOnly: command === 'run' });
+  const env = explicitEnv ?? resolveDefaultEnvironment();
   const commandModule = (await import(`./commands/${command}.js`)) as {
     execute(args: string[], opts: { env: string }): Promise<void>;
   };
