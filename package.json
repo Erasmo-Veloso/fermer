@@ -1,6 +1,6 @@
 {
   "name": "fermer-cli",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Git-native encrypted secrets manager. No server, no SaaS — secrets live in your repo, encrypted end-to-end.",
   "type": "module",
   "bin": {
