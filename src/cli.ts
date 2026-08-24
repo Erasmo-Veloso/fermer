@@ -14,6 +14,7 @@ Commands:
   trust <key.pub>       Authorize a developer
   revoke <fingerprint>  Revoke a developer and rotate keys
   members               List authorized developers
+  migrate               Upgrade an older .fermer/ member list
 
 Options:
   -e, --env <name>      Target environment (default: development)

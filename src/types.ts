@@ -19,11 +19,21 @@ export interface MemberEntry {
   label: string;
   wrappedKey: WrappedKey;
   addedAt: string;
+  /** Fingerprint of the member who attested this one; equals own fingerprint for the founder. */
+  addedBy: string;
+  /** ECDSA signature by `addedBy` over the attestation payload. */
+  signature: string;
 }
 
 export interface MembersFile {
-  version: 1;
+  version: 2;
   members: Record<string, MemberEntry>;
+}
+
+/** The pre-attestation format, still readable so `fermer migrate` can upgrade it. */
+export interface LegacyMembersFile {
+  version: 1;
+  members: Record<string, Omit<MemberEntry, 'addedBy' | 'signature'>>;
 }
 
 export interface EncryptedValue {

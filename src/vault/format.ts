@@ -12,7 +12,8 @@ import {
 } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import type { ConfigFile, VaultFile, MembersFile } from '../types.js';
+import type { ConfigFile, VaultFile, MembersFile, LegacyMembersFile } from '../types.js';
+import { verifyMemberChain } from './attest.js';
 
 export function findRepoRoot(): string {
   let dir = resolve(process.cwd());
@@ -138,13 +139,17 @@ function validateVault(data: unknown, path: string): VaultFile {
   return record as unknown as VaultFile;
 }
 
-function validateMembers(data: unknown, path: string): MembersFile {
-  const kind = 'Fermer members file';
-  const record = assertEnvelope(data, kind, path);
-  if (!isRecord(record.members)) {
+function validateMembersShape(data: unknown, path: string, kind: string, expectedVersion: number): Record<string, unknown> {
+  if (!isRecord(data)) {
+    fail(kind, path, 'expected a JSON object at the top level.');
+  }
+  if (data.version !== expectedVersion) {
+    fail(kind, path, `expected version ${expectedVersion}.`);
+  }
+  if (!isRecord(data.members)) {
     fail(kind, path, '"members" must be an object.');
   }
-  for (const [fingerprint, entry] of Object.entries(record.members)) {
+  for (const [fingerprint, entry] of Object.entries(data.members)) {
     const where = `member "${fingerprint}"`;
     if (!isRecord(entry)) fail(kind, path, `${where} is not an object.`);
     if (typeof entry.publicKey !== 'string') fail(kind, path, `${where} is missing a string "publicKey".`);
@@ -154,7 +159,43 @@ function validateMembers(data: unknown, path: string): MembersFile {
       fail(kind, path, `${where}'s wrappedKey is missing a string "ephemeralPublicKey".`);
     }
   }
-  return record as unknown as MembersFile;
+  return data;
+}
+
+function validateMembers(data: unknown, path: string): MembersFile {
+  const kind = 'Fermer members file';
+
+  if (isRecord(data) && data.version === 1) {
+    throw new Error(
+      `${kind} at ${path} uses the unsigned version 1 format. Members are now cryptographically attested so an entry cannot be added by editing the file directly. Run "fermer migrate" to upgrade, after reviewing the member list.`,
+    );
+  }
+
+  const record = validateMembersShape(data, path, kind, 2);
+  for (const [fingerprint, entry] of Object.entries(record.members as Record<string, Record<string, unknown>>)) {
+    if (typeof entry.addedBy !== 'string') {
+      fail(kind, path, `member "${fingerprint}" is missing a string "addedBy".`);
+    }
+    if (typeof entry.signature !== 'string') {
+      fail(kind, path, `member "${fingerprint}" is missing a string "signature".`);
+    }
+  }
+
+  const members = record as unknown as MembersFile;
+  const chain = verifyMemberChain(members.members);
+  if (!chain.ok) {
+    throw new Error(
+      `${kind} at ${path} is not trustworthy: ${chain.reason}. Someone may have edited it directly instead of using "fermer trust". Inspect the file's history with "git log -p .fermer/members.json" and restore a known-good version.`,
+    );
+  }
+  return members;
+}
+
+export function readLegacyMembers(): LegacyMembersFile {
+  return readJson(membersPath(), 'Fermer members file', (data, path) => {
+    const record = validateMembersShape(data, path, 'Fermer members file', 1);
+    return record as unknown as LegacyMembersFile;
+  });
 }
 
 // Every command reads a file, changes it in memory, and writes it back. If a

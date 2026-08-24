@@ -13,6 +13,7 @@ export const COMMANDS = new Set([
   'trust',
   'revoke',
   'members',
+  'migrate',
 ]);
 
 export function readVersion(): string {

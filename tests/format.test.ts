@@ -150,7 +150,7 @@ describe('format: structural validation', () => {
 
   it('rejects a member missing its public key', () => {
     writeFermerFile('members.json', {
-      version: 1,
+      version: 2,
       members: { abc: { label: 'x', addedAt: 'now', wrappedKey: { ephemeralPublicKey: 'e', iv: 'i', ciphertext: 'c', tag: 't' } } },
     });
     expect(() => readMembers()).toThrow(/"publicKey"/);
@@ -158,10 +158,47 @@ describe('format: structural validation', () => {
 
   it('rejects a member whose wrappedKey has no ephemeral public key', () => {
     writeFermerFile('members.json', {
-      version: 1,
+      version: 2,
       members: { abc: { publicKey: 'p', label: 'x', addedAt: 'now', wrappedKey: { iv: 'i', ciphertext: 'c', tag: 't' } } },
     });
     expect(() => readMembers()).toThrow(/"ephemeralPublicKey"/);
+  });
+
+  it('rejects a version 1 member list and points at migrate', () => {
+    writeFermerFile('members.json', { version: 1, members: {} });
+    expect(() => readMembers()).toThrow(/fermer migrate/);
+  });
+
+  it('rejects a member entry with no attestation fields', () => {
+    writeFermerFile('members.json', {
+      version: 2,
+      members: {
+        abc: {
+          publicKey: 'p',
+          label: 'x',
+          addedAt: 'now',
+          wrappedKey: { ephemeralPublicKey: 'e', iv: 'i', ciphertext: 'c', tag: 't' },
+        },
+      },
+    });
+    expect(() => readMembers()).toThrow(/"addedBy"/);
+  });
+
+  it('rejects a member list where nobody is the founder', () => {
+    writeFermerFile('members.json', {
+      version: 2,
+      members: {
+        abc: {
+          publicKey: 'p',
+          label: 'x',
+          addedAt: 'now',
+          addedBy: 'someone-else',
+          signature: 'c2ln',
+          wrappedKey: { ephemeralPublicKey: 'e', iv: 'i', ciphertext: 'c', tag: 't' },
+        },
+      },
+    });
+    expect(() => readMembers()).toThrow(/no member is attested as the project founder/);
   });
 
   it('accepts a well-formed vault', () => {
