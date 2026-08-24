@@ -11,6 +11,7 @@ Commands:
   list                  List secret keys
   run <command...>      Run a command with secrets injected
   export                Output secrets as KEY=VALUE lines
+  import [file]         Bulk-import an existing .env (default: .env)
   trust <key.pub>       Authorize a developer
   revoke <fingerprint>  Revoke a developer and rotate keys
   members               List authorized developers
@@ -19,6 +20,8 @@ Commands:
 Options:
   -e, --env <name>      Target environment (default: development)
   --json                Machine-readable output (list, members, export)
+  --dry-run             With import, report what would happen and write nothing
+  --overwrite           With import, replace secrets that already exist
   -h, --help            Show this help
   --version             Show version
 
@@ -50,6 +53,18 @@ async function main(): Promise<void> {
   };
   await commandModule.execute(rest, { env });
 }
+
+// Piping into something that stops reading early -- "fermer export | head",
+// "fermer list | grep X" -- closes stdout under us, and the next write raises
+// EPIPE. Unix tools exit quietly in that situation instead of reporting it as a
+// failure, so this does the same rather than printing a stack trace over the
+// output the user was actually reading.
+process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') {
+    process.exit(0);
+  }
+  throw err;
+});
 
 main().catch((err: unknown) => {
   process.stderr.write(`Error: ${(err as Error).message}\n`);
