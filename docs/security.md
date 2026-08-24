@@ -63,12 +63,14 @@ All cryptographic operations use Node.js built-in `node:crypto`, which delegates
 ## File Permissions
 
 On Unix systems:
-- `~/.fermer/identity.json` should be mode `0600` (owner read/write only)
+- `~/.fermer/identity.json` is created with mode `0600` (owner read/write only)
+- `~/.fermer/` is created with mode `0700`, so the private key does not sit in a
+  world-listable directory on a shared machine
 - `.fermer/` directory contents are committed to Git — they contain no plaintext secrets
 
 On Windows:
 - `~/.fermer/identity.json` is protected by the user profile ACL
-- No additional permission hardening is applied
+- The mode arguments are inert; no additional permission hardening is applied
 
 ## Operational Security Recommendations
 
@@ -76,8 +78,27 @@ On Windows:
 
 2. **Use per-environment separation.** Keep production secrets in a `production` environment. Grant only the team members who need production access.
 
-3. **Review `members.json` in PRs.** Treat changes to `.fermer/members.json` as security-sensitive. A malicious PR could add an unauthorized public key.
+3. **Verify a fingerprint out of band before trusting it.** `fermer trust`
+   grants the holder of that key access to every secret in the project. A public
+   key travelling over email or chat can be swapped in transit for the
+   attacker's own, and nothing in the file itself would reveal that. Have the
+   person read their fingerprint from `fermer identity` over a channel you
+   trust — a call, or in person — and compare it against what `fermer trust`
+   reports.
 
-4. **Back up your identity.** If you lose `~/.fermer/identity.json` and no one re-runs `fermer trust` for you, you lose access to all projects.
+4. **Review `members.json` in PRs.** Treat changes to `.fermer/members.json` as
+   security-sensitive: it is the project's access list, so a change to it is a
+   permissions change. A malicious PR could add an unauthorized public key, and
+   it would look like a routine diff of base64.
 
-5. **Use `.gitattributes` for merge strategy.** Add `.fermer/vault.json merge=ours` to prevent merge conflicts in the encrypted vault. Resolve secret conflicts with `fermer set` after merging.
+5. **Back up your identity.** If you lose `~/.fermer/identity.json` and no one
+   re-runs `fermer trust` for you, you lose access to all projects. There is no
+   recovery path by design — no server holds a copy.
+
+6. **Let `fermer init` manage the merge strategy.** It records
+   `.fermer/vault.json merge=binary` and the same for `members.json` in
+   `.gitattributes`. This makes Git report a conflict instead of attempting a
+   line-based merge of two ciphertexts, which would produce a file that
+   decrypts to nothing. Resolve such a conflict by picking one side and
+   re-applying the other's change with `fermer set` — never by hand-editing the
+   ciphertext.

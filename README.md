@@ -34,8 +34,8 @@ fermer set DATABASE_URL=postgres://localhost/mydb
 # Run your app with secrets injected
 fermer run npm start
 
-# Add a team member: they export their public key, you trust it
-fermer trust alice-key.pub
+# Add a team member (see "Working with a Team" below)
+fermer trust alice.pub
 
 # List who has access
 fermer members
@@ -109,6 +109,78 @@ environment explicitly:
 ```bash
 fermer set PREVIEW_URL=https://preview.example -e preview --new-env
 ```
+
+## Working with a Team
+
+### Giving someone access
+
+Access is granted by trusting someone's **public** key. That key comes from
+them — you cannot create it on their behalf, because the matching private key
+must never leave their machine.
+
+**1. They export their public key.** On their own machine, Alice runs:
+
+```bash
+fermer identity --export alice.pub
+```
+
+If she has no identity yet, this creates one and exports it in the same step.
+
+**2. She sends you the file.** Slack, email, a chat message, an attachment —
+any channel is fine. `alice.pub` is a public key: on its own it decrypts
+nothing. The file that must never be shared is her `~/.fermer/identity.json`,
+which holds the private key.
+
+**3. Verify the fingerprint before trusting it.** Ask Alice to run
+`fermer identity` and read you her fingerprint over a channel you trust — a
+call, or in person. Then compare it with what `fermer trust` reports back.
+Whoever's public key ends up in `members.json` can read every secret in the
+project, so this step is what stops someone swapping the file in transit for a
+key of their own.
+
+**4. You trust the key and push.**
+
+```bash
+fermer trust ./alice.pub
+git add .fermer/members.json
+git commit -m "Grant Alice access"
+git push
+```
+
+**5. She pulls, and she is in.**
+
+```bash
+git pull
+fermer run npm start
+```
+
+The member's label comes from the file name, so `alice.pub` shows up as
+`alice` in `fermer members`. Rename the file before trusting it if you want a
+different label.
+
+Because access lives in `.fermer/members.json`, a change to that file in a
+pull request is a permissions change. Review it as carefully as you would
+review one.
+
+### Taking access away
+
+```bash
+fermer revoke <fingerprint>
+git add .fermer/
+git commit -m "Revoke Alice"
+git push
+```
+
+Revoking generates a new project key, re-encrypts every secret in every
+environment with it, and re-wraps it for everyone who remains. The revoked
+member's wrapped key now opens a project key that no current secret uses.
+
+**Rotate the secret values too.** Cryptographic revocation stops future
+access, but it cannot un-see what someone already read: they may still have
+the old database password written down, and older commits in Git history are
+still encrypted with the key they held. For anything sensitive, change the
+actual credential at its source — a new database password, a reissued API key
+— and then `fermer set` the new value.
 
 ## Requirements
 
